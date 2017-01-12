@@ -1,0 +1,26 @@
+{
+  "name": "rabblerouser-stream",
+  "version": "0.1.0",
+  "description": "Rabble Rouser's simplified events stream client",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "streams",
+    "rabble-rouser",
+    "events"
+  ],
+  "author": {
+    "name": "The Rabble Rouser Team",
+    "email": "rabblerouserproject@gmail.com",
+    "url": "https://rabblerouser.team"
+  },
+  "contributors": [
+    {
+      "name": "Pam Rucinque",
+      "email": "pamela.rucinque@gmail.com",
+      "url": "https://pamrucinque.com/"
+    }
+  ]
+}
