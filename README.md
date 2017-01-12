@@ -7,7 +7,7 @@ Rabble Rouser's simplified events streaming client
 Using npm:
 ```shell
 $ npm i -g npm
-$ npm i --save lodash
+$ npm i --save rabblerouser-stream
 ```
 
 ## Usage
