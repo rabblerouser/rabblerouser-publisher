@@ -7,7 +7,7 @@ Rabble Rouser's simplified events streaming client
 Using npm:
 ```shell
 $ npm i -g npm
-$ npm i --save rabblerouser-stream
+$ npm i --save git+ssh://git@github.com:rabblerouser/rabblerouser-stream.git
 ```
 
 ## Usage
