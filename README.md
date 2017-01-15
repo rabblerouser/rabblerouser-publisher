@@ -12,6 +12,5 @@ $ npm i --save git+ssh://git@github.com:rabblerouser/rabblerouser-stream.git
 
 ## Usage
 ```js
-// Load the full build.
 const stream = require('rabblerouser-stream');
 ```
