@@ -22,5 +22,8 @@
       "email": "pamela.rucinque@gmail.com",
       "url": "https://pamrucinque.com/"
     }
-  ]
+  ],
+  "dependencies": {
+    "aws-sdk": "^2.7.21"
+  }
 }
