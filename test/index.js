@@ -3,9 +3,9 @@
 const stream = require('../');
 
 var params = {
-  data: 'I am a harmless little event',
+  data: 'we are streaming events',
   channel: 'registration',
-  stream: 'rabble-rouser-main-stream'
+  stream: 'dan-pam-stream-keep-away'
 };
 
 stream.producer.publish(params).then(console.log).catch(console.log);

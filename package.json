@@ -4,7 +4,7 @@
   "description": "Rabble Rouser's simplified events stream client",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "event:publish": "node test/index.js"
   },
   "keywords": [
     "streams",
