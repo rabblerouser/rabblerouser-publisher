@@ -29,3 +29,11 @@ stream.producer.publish(params)
 .then(result => { ... })
 .catch(error => { ... });
 ```
+
+### Test
+
+First, setup your [AWS config](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html).
+
+It's all very hardcoded at this moment, but you can run:
+
+`npm run event:publish`
