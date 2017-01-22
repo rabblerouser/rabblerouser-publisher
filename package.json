@@ -2,7 +2,7 @@
   "name": "rabblerouser-stream",
   "version": "0.1.0",
   "description": "Rabble Rouser's simplified events stream client",
-  "main": "main.js",
+  "main": "index.js",
   "scripts": {
     "event:publish": "node test/index.js"
   },

@@ -3,7 +3,4 @@
 const producer = require('./aws/producer');
 const consumer = require('./aws/consumer');
 
-module.exports = {
-  producer: producer,
-  consumer: consumer,
-};
+module.exports = { producer, consumer };
