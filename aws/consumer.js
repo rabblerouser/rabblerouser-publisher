@@ -1,9 +1,10 @@
 'use strict';
+const AWS = require('aws-sdk');
 
-function get(params) {
-  console.log('put event to stream.');
+function get() {
+  
 }
 
-module.exports= {
+module.exports = {
   get: get
-}
+};

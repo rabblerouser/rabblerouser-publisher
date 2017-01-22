@@ -17,12 +17,15 @@ First, setup your [AWS config](https://docs.aws.amazon.com/cli/latest/userguide/
 ### Producer
 
 ```js
-const { producer } = require('rabblerouser-stream');
+const stream = require('rabblerouser-stream');
+const producer = stream.producer({
+  stream: 'my-stream',
+  region: 'ap-southeast-2',
+});
 
 var params = {
   data: 'I am a harmless little event',
-  channel: 'my-channel',
-  stream: 'my-stream'
+  channel: 'my-channel'
 };
 
 producer.publish(params)

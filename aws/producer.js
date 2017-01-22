@@ -1,21 +1,5 @@
 'use strict';
 const AWS = require('aws-sdk');
-const kinesis = new AWS.Kinesis({
-  apiVersion: '2013-12-02',
-  region: 'ap-southeast-2',
-});
-
-function publish(event) {
-  var awsParams = {
-    Data: event.data,
-    StreamName: event.stream,
-    PartitionKey: event.channel,
-  };
-
-  return kinesis.putRecord(awsParams).promise()
-  .then(processResult)
-  .catch(handleError);
-}
 
 function processResult(result) {
   return {
@@ -27,6 +11,25 @@ function handleError(error) {
   throw Error(error);
 }
 
-module.exports = {
-  publish: publish
-};
+module.exports = function (settings) {
+  const kinesis = new AWS.Kinesis({
+    apiVersion: settings.version || '2013-12-02',
+    region: settings.region || 'ap-southeast-2',
+  });
+
+  let thisProducer = {};
+
+  thisProducer.publish = (event) => {
+    var awsParams = {
+      Data: event.data,
+      PartitionKey: event.channel,
+      StreamName: settings.stream,
+    };
+
+    return kinesis.putRecord(awsParams).promise()
+    .then(processResult)
+    .catch(handleError);
+  };
+
+  return thisProducer;
+}
