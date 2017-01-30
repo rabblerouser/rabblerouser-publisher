@@ -5,7 +5,9 @@ const publish_to_rr_stream = publisher({ region: 'ap-southeast-2', stream: 'rr-s
 
 var event = {
   type: 'registration',
-  name: 'Jane Doe',
+  data: {
+    name: 'Jane Doe'
+  }
 };
 
 publish_to_rr_stream(event)
