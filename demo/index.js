@@ -1,7 +1,7 @@
 'use strict';
 
 const publisher = require('../');
-const publish_to_rr_stream = publisher({ region: 'ap-southeast-2', stream: 'rr-stream' });
+const publish_to_rr_stream = publisher({ region: 'ap-southeast-2', stream: 'rabblerouser_stream' });
 
 var event = {
   type: 'registration',
