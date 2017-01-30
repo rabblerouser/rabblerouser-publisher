@@ -1,14 +1,13 @@
 'use strict';
 
 const publisher = require('../');
-
-const publish = publisher({ region: 'ap-southeast-2', stream: 'rr-stream' });
+const publish_to_rr_stream = publisher({ region: 'ap-southeast-2', stream: 'rr-stream' });
 
 var event = {
   type: 'registration',
   name: 'Jane Doe',
 };
 
-publish(event)
+publish_to_rr_stream(event)
   .then(console.log)
   .catch(console.log);
