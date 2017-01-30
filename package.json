@@ -20,8 +20,11 @@
   "contributors": [
     {
       "name": "Pam Rucinque",
-      "email": "pamela.rucinque@gmail.com",
-      "url": "https://pamrucinque.com/"
+      "url": "https://github.com/pameck"
+    },
+    {
+      "name": "Cam Jackson",
+      "url": "https://github.com/camjackson"
     }
   ],
   "dependencies": {
