@@ -1,6 +1,6 @@
 {
   "name": "rabblerouser-publisher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Rabble Rouser's simplified event publisher",
   "main": "index.js",
   "scripts": {
