@@ -1,42 +1,43 @@
 # rabblerouser-stream v0.1.0
 
-Rabble Rouser's simplified events streaming client
+Rabble Rouser's simplified event publisher. It pushes events to a kinesis stream.
 
 ## Installation
 
 Using npm:
 ```shell
 $ npm i -g npm
-$ npm i --save git+ssh://git@github.com:rabblerouser/rabblerouser-stream.git
+$ npm i --save git+ssh://git@github.com:rabblerouser/rabblerouser-publisher.git
 ```
 
 ## Usage
 
 First, setup your [AWS config](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html).
 
-### Producer
+Then use it like this:
 
 ```js
-const stream = require('rabblerouser-stream');
-const producer = stream.producer({
-  stream: 'my-stream',
-  region: 'ap-southeast-2',
-});
+// Import the library and initialise it with your kinesis settings
+const publisher = require('rabblerouser-publisher');
+const publish = publisher({ stream: 'my-stream', region: 'ap-southeast-2' });
 
-var params = {
-  data: 'I am a harmless little event',
-  channel: 'my-channel'
+// Each event must have a type. This is used for consumers to decide whether they are
+// interested in the event, and it will also be used by kinesis for sharding of events.
+var event = {
+  type: 'registration',
+  name: 'Jane Doe',
 };
 
-producer.publish(params)
-.then(result => { ... })
-.catch(error => { ... });
+// The publish function returns a Promise.
+publish(event)
+  .then(result => { ... })
+  .catch(error => { ... });
 ```
 
-### Test
+### Demo
 
 First, setup your [AWS config](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html).
 
-It's all very hardcoded at this moment, but you can run:
+Then run this to publish a hard-coded event to a hard-coded stream:
 
-`npm run event:publish`
+`npm run demo`
