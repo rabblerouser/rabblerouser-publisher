@@ -17,9 +17,17 @@ First, setup your [AWS config](https://docs.aws.amazon.com/cli/latest/userguide/
 Then use it like this:
 
 ```js
-// Import the library and initialise it with your kinesis settings
 const publisher = require('rabblerouser-publisher');
-const publish = publisher({ stream: 'my-stream', region: 'ap-southeast-2' });
+
+// Configure with your kinesis settings. See https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Kinesis.html#constructor-property
+const settings = {
+  apiVersion: '2013-12-02',
+  region: 'ap-southeast-2',
+  accessKeyId: 'ABC123',
+  secretAccessKey: 'ABC123',
+  stream: 'my-stream',
+};
+const publish = publisher(settings);
 
 // Each event must have a type. This is used for consumers to decide whether they are
 // interested in the event, and it will also be used by kinesis for sharding of events.

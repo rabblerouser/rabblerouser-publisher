@@ -1,10 +1,7 @@
 const AWS = require('aws-sdk');
 
 module.exports = (settings) => {
-  const kinesis = new AWS.Kinesis({
-    apiVersion: settings.version || '2013-12-02',
-    region: settings.region || 'ap-southeast-2',
-  });
+  const kinesis = new AWS.Kinesis(settings);
 
   return (event) => {
     const awsParams = {
