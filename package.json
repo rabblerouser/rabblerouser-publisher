@@ -4,7 +4,8 @@
   "description": "Rabble Rouser's simplified event publisher",
   "main": "index.js",
   "scripts": {
-    "demo": "node demo/index.js"
+    "demo": "node demo/index.js",
+    "test": "mocha test/index.js"
   },
   "keywords": [
     "streams",
@@ -29,5 +30,12 @@
   ],
   "dependencies": {
     "aws-sdk": "^2.7.21"
+  },
+  "engines": {
+    "node": ">=6.0.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0"
   }
 }
