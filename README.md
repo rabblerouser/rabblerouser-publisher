@@ -7,7 +7,7 @@ Rabble Rouser's simplified event publisher. It pushes events to a kinesis stream
 Using npm:
 ```shell
 $ npm i -g npm
-$ npm i --save git+ssh://git@github.com:rabblerouser/rabblerouser-publisher.git
+$ npm i --save rabblerouser-publisher
 ```
 
 ## Usage
@@ -33,7 +33,9 @@ const publish = publisher(settings);
 // interested in the event, and it will also be used by kinesis for sharding of events.
 var event = {
   type: 'registration',
-  name: 'Jane Doe',
+  data: {
+    name: 'Jane Doe'
+  }
 };
 
 // The publish function returns a Promise.
