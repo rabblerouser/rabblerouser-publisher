@@ -1,4 +1,4 @@
-# rabblerouser-stream v0.1.0
+# rabblerouser-publisher
 
 Rabble Rouser's simplified event publisher. It pushes events to a kinesis stream.
 
