@@ -17,7 +17,7 @@ module.exports = (settings) => {
 
   return (event) => {
     const awsParams = {
-      Data: JSON.stringify(event.data),
+      Data: JSON.stringify(event),
       PartitionKey: event.type,
       StreamName: settings.stream,
     };
