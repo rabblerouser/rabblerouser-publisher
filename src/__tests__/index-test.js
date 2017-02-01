@@ -1,4 +1,4 @@
-const createClient = require('../src');
+const createClient = require('..');
 
 describe('createStream', () => {
   it('has a method to publish events to the stream', () => {

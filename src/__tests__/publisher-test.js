@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 
-const publisher = require('../src/publisher');
+const publisher = require('../publisher');
 
 describe('publisher', () => {
   let sandbox;
