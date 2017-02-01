@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 
-const publisher = require('../publisher');
+const createPublisher = require('../publisher');
 
 describe('publisher', () => {
   let sandbox;
@@ -17,15 +17,15 @@ describe('publisher', () => {
   })
 
   it('should require settings to be given', () => {
-    expect(() => { publisher() }).to.throw(Error, /No settings defined./);
+    expect(() => { createPublisher() }).to.throw(Error, /No settings defined./);
   });
 
   it('should require a stream name', () => {
-    expect(() => { publisher({}) }).to.throw(Error, /No stream defined./);
+    expect(() => { createPublisher({}) }).to.throw(Error, /No stream defined./);
   });
 
   it('returns a function that can put records to kinesis', () => {
-    const publish = publisher({ stream: 'my-stream' });
+    const publish = createPublisher({ stream: 'my-stream' });
     publish({ type: 'some-type', data: { some: 'data' } });
 
     expect(putRecord).to.have.been.calledWith({
@@ -36,13 +36,13 @@ describe('publisher', () => {
   });
 
   it('refuses to send events without a type', () => {
-    const publish = publisher({ stream: 'my-stream' });
+    const publish = createPublisher({ stream: 'my-stream' });
 
     expect(() => { publish({ data: {} }) }).to.throw(Error, /No event type defined./);
   });
 
   it('refuses to send events without data', () => {
-    const publish = publisher({ stream: 'my-stream' });
+    const publish = createPublisher({ stream: 'my-stream' });
 
     expect(() => { publish({ type: {} }) }).to.throw(Error, /No event data defined./);
   });

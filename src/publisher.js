@@ -20,12 +20,12 @@ const validateEvent = event => {
   }
 }
 
-const publisher = (settings) => {
+const createPublisher = settings => {
   validateSettings(settings);
 
   const kinesis = new AWS.Kinesis(settings);
 
-  return (event) => {
+  const publisher = event => {
     validateEvent(event);
 
     const awsParams = {
@@ -36,6 +36,7 @@ const publisher = (settings) => {
 
     return kinesis.putRecord(awsParams).promise();
   };
+  return publisher;
 };
 
-module.exports = publisher;
+module.exports = createPublisher;

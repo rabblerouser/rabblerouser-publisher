@@ -1,9 +1,9 @@
-const publisher = require('./publisher');
-const consumer = require('./consumer');
+const createPublisher = require('./publisher');
+const createConsumer = require('./consumer');
 
 const createClient = (settings) => ({
-  publish: publisher(settings),
-  consumer,
+  publish: createPublisher(settings),
+  consumer: createConsumer(),
 });
 
 module.exports = createClient;

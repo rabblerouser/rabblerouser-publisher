@@ -1,25 +1,41 @@
 'use strict';
 
-const eventHandlers = {};
-
-// TODO: Authenticate the request
-const consumer = (req, res) => {
-  const event = req.body;
-  if (!event) {
-    res.status(500).json({ error: 'something went wrong!' });
+const validateEventHandler = (eventType, handler) => {
+  if (!eventType) {
+    throw new Error('No event type defined for handler.');
   }
 
-  const eventHandler = eventHandlers[event.type];
-  if (eventHandler) {
-    process.env.NODE_ENV !== 'test' && console.log('Handling event:', event);
-    eventHandler(event.data);
+  if (!handler || typeof handler !== 'function') {
+    throw new Error('Invalid event handler.');
   }
-
-  res.sendStatus(200);
 }
 
-consumer.on = (eventType, handler) => {
-  eventHandlers[eventType] = handler;
-}
+const createConsumer = () => {
+  const eventHandlers = {};
 
-module.exports = consumer;
+  const consumer = (req, res) => {
+    const event = req.body;
+    if (!event) {
+      return res.status(500).json({ error: 'something went wrong!' });
+    }
+
+    const eventHandler = eventHandlers[event.type];
+    if (eventHandler) {
+      process.env.NODE_ENV !== 'test' && console.log('Handling event:', event);
+      eventHandler(event.data);
+    }
+
+    res.sendStatus(200);
+  };
+
+  consumer.on = (eventType, handler) => {
+    validateEventHandler(eventType, handler);
+
+    eventHandlers[eventType] = handler;
+  };
+
+  return consumer;
+};
+
+
+module.exports = createConsumer;
