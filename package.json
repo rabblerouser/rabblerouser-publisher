@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "demo": "node demo/index.js",
-    "test": "mocha --recursive test"
+    "test": "mocha -r test/testGlobals.js --recursive test"
   },
   "keywords": [
     "streams",
@@ -38,6 +38,8 @@
     "body-parser": "^1.16.0",
     "chai": "^3.5.0",
     "express": "^4.14.1",
-    "mocha": "^3.2.0"
+    "mocha": "^3.2.0",
+    "sinon": "^1.17.7",
+    "sinon-chai": "^2.8.0"
   }
 }
