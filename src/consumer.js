@@ -10,7 +10,10 @@ const consumer = (req, res) => {
   }
 
   const eventHandler = eventHandlers[event.type];
-  eventHandler && eventHandler(event.data);
+  if (eventHandler) {
+    console.log('Handling event:', event);
+    eventHandler(event.data);
+  }
 
   res.sendStatus(200);
 }
