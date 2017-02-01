@@ -11,7 +11,7 @@ const consumer = (req, res) => {
 
   const eventHandler = eventHandlers[event.type];
   if (eventHandler) {
-    console.log('Handling event:', event);
+    process.env.NODE_ENV !== 'TEST' && console.log('Handling event:', event);
     eventHandler(event.data);
   }
 
