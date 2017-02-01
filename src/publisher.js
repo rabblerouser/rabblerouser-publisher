@@ -2,7 +2,7 @@ const AWS = require('aws-sdk');
 
 function validateSettings(settings) {
   if (!settings) {
-    throw Error('No publisher settings defined.');
+    throw Error('No settings defined.');
   }
 
   if (!settings.stream) {
@@ -10,7 +10,7 @@ function validateSettings(settings) {
   }
 }
 
-module.exports = (settings) => {
+const publisher = (settings) => {
   validateSettings(settings);
 
   const kinesis = new AWS.Kinesis(settings);
@@ -24,4 +24,6 @@ module.exports = (settings) => {
 
     return kinesis.putRecord(awsParams).promise();
   };
-}
+};
+
+module.exports = publisher;
