@@ -3,7 +3,7 @@ const createConsumer = require('./consumer');
 
 const createClient = (settings) => ({
   publish: createPublisher(settings),
-  consumer: createConsumer(),
+  consumer: createConsumer(settings),
 });
 
 module.exports = createClient;
