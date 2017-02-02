@@ -14,6 +14,10 @@ const createConsumer = () => {
   const eventHandlers = {};
 
   const consumer = (req, res) => {
+    if (!req.header('Authorization') || req.header('Authorization') !== process.env.EVENT_AUTH_TOKEN) {
+      return res.status(401).json({ error: 'Invalid Authorization header' });
+    }
+
     const event = req.body;
     if (!event) {
       return res.status(500).json({ error: 'something went wrong!' });

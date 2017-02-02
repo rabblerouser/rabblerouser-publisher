@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "demo": "node demo/index.js",
-    "test": "mocha -r src/__tests__/testGlobals.js --recursive src/__tests__"
+    "test": "NODE_ENV=test mocha -r src/__tests__/testGlobals.js --recursive src/__tests__"
   },
   "keywords": [
     "streams",
