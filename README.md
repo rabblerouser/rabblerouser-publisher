@@ -48,8 +48,11 @@ streamClient.publish(event)
 myExpressJsApp.post('/events', streamClient.consumer);
 
 // Then you can set up specific handlers for specific event types. Notice that we only receive the `data` here.
+// Event handlers must return a resolved promise if the event handling succeeded, or a rejected promise if they fail to
+// process the event. This will cause the event to re-sent until it succeeds.
 streamClient.consumer.on('member-registered', data => {
   console.log('Registering a new member called:', data.name);
+  return Promise.resolve();
 });
 ```
 

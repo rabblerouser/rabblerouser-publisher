@@ -24,12 +24,16 @@ const createConsumer = (settings) => {
     }
 
     const eventHandler = eventHandlers[event.type];
-    if (eventHandler) {
-      process.env.NODE_ENV !== 'test' && console.log('Handling event:', event);
-      eventHandler(event.data);
+    if (!eventHandler) {
+      process.env.NODE_ENV !== 'test' && console.log('Ignoring event:', event);
+      return res.sendStatus(204);;
     }
 
-    res.sendStatus(200);
+    process.env.NODE_ENV !== 'test' && console.log('Handling event:', event);
+    return eventHandler(event.data).then(
+      () => res.sendStatus(200),
+      error => res.status(500).json({ error })
+    );
   };
 
   consumer.on = (eventType, handler) => {

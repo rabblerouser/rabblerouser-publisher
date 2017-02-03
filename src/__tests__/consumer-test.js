@@ -9,7 +9,7 @@ describe('consumer', () => {
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
     res = {
-      status: sinon.stub().returns({ json: () => {} }),
+      status: sinon.stub().returns({ json: sinon.spy() }),
       sendStatus: sinon.spy(),
     };
   });
@@ -37,18 +37,32 @@ describe('consumer', () => {
   it('succeeds if there is no handler that matches the given event', () => {
     createConsumer(settings)({ header, body: {} }, res);
 
-    expect(res.sendStatus).to.have.been.calledWith(200);
+    expect(res.sendStatus).to.have.been.calledWith(204);
   });
 
   it('succeeds and sends the event data when there is a registered handler', () => {
     const consumer = createConsumer(settings);
 
-    const eventHandler = sinon.spy();
+    const eventHandler = sinon.stub().returns(Promise.resolve());
     consumer.on('some-event-type', eventHandler);
 
-    consumer({ header, body: { type: 'some-event-type', data: { some: 'data' } } }, res);
+    return consumer({ header, body: { type: 'some-event-type', data: { some: 'data' } } }, res).then(() => {
+      expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+      expect(res.sendStatus).to.have.been.calledWith(200);
+    });
+  });
 
-    expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+  it('fails if the event handler fails', () => {
+    const consumer = createConsumer(settings);
+
+    const eventHandler = sinon.stub().returns(Promise.reject('Error!'));
+    consumer.on('some-event-type', eventHandler);
+
+    return consumer({ header, body: { type: 'some-event-type', data: { some: 'data' } } }, res).then(() => {
+      expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+      expect(res.status).to.have.been.calledWith(500);
+      expect(res.status().json).to.have.been.calledWith({ error: 'Error!' });
+    });
   });
 
   it('does not allow the event if the auth header is missing', () => {
