@@ -13,6 +13,7 @@
     "events",
     "kinesis"
   ],
+  "license": "AGPL-3.0",
   "author": {
     "name": "The Rabble Rouser Team",
     "email": "rabblerouserproject@gmail.com",
