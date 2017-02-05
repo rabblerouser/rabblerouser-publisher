@@ -26,6 +26,7 @@ const settings = {
   accessKeyId: 'ABC123',
   secretAccessKey: 'ABC123',
   stream: 'my-stream',
+  eventAuthToken, 'some random token',
 };
 const streamClient = createClient(settings);
 
@@ -56,7 +57,42 @@ streamClient.consumer.on('member-registered', data => {
 });
 ```
 
-### Demo
+## API Reference
+
+### `publish`
+
+Accepts an object with a `type` (which must be a non-empty string), and `data` (which must be `JSON.stringify`-able).
+Sends a `PutRecord` request to kinesis containing these two fields. Other fields on the event are ignored.
+
+### `consumer`
+
+A function that should be bound to an HTTP POST endpoint. It expects to receive an express.js `(req, res)` pair. The
+incoming request must have an `Authorization` header that matches the `eventAuthToken` that was specified when creating
+the stream client. The request body must have the following structure:
+
+```json
+{
+  "kinesisSchemaVersion": "1.0",
+  "partitionKey": "<kinesis partition key>",
+  "sequenceNumber": "<sequence number of the event>",
+  "data": "<base64-encoded JSON string>",
+  "approximateArrivalTimestamp": 123456.78
+}
+```
+
+The `data` field will be decoded and parsed, resulting in an event object with `type` and `data` attributes as described
+above.
+
+### `consumer.on`
+
+Accepts an `eventType` string, and a `handler` function that will be called whenever an event of that type is received.
+The `handler` will be passed only the `data` field of the received object (not the type, or any of the metadata), and it
+should return a Promise. The resolution of that promise will be used to indicate whether or not the event was processed
+successfully. Events that fail to process will be retried again until they succeed. *This may change in the future, see
+[this issue](https://github.com/rabblerouser/rabblerouser-core/issues/132) for more discussion of event failures, and
+how we might address the problem of invalid events that can never succeed*
+
+## Demo
 
 First, setup your [AWS config](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html).
 
