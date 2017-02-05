@@ -29,7 +29,7 @@ const createPublisher = settings => {
     validateEvent(event);
 
     const awsParams = {
-      Data: JSON.stringify(event),
+      Data: JSON.stringify({ type: event.type, data: event.data }),
       PartitionKey: event.type,
       StreamName: settings.stream,
     };

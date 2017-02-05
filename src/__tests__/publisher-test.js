@@ -35,6 +35,17 @@ describe('publisher', () => {
     });
   });
 
+  it('only sends the type and data to kinesis', () => {
+    const publish = createPublisher({ stream: 'my-stream' });
+    publish({ type: 'some-type', data: { some: 'data' }, extra: 'info' });
+
+    expect(putRecord).to.have.been.calledWith({
+      Data: '{"type":"some-type","data":{"some":"data"}}',
+      PartitionKey: 'some-type',
+      StreamName: 'my-stream',
+    });
+  });
+
   it('refuses to send events without a type', () => {
     const publish = createPublisher({ stream: 'my-stream' });
 
