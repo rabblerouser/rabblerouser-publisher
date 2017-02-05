@@ -49,12 +49,24 @@ describe('publisher', () => {
   it('refuses to send events without a type', () => {
     const publish = createPublisher({ stream: 'my-stream' });
 
-    expect(() => { publish({ data: {} }) }).to.throw(Error, /No event type defined./);
+    expect(() => { publish({ data: {} }) }).to.throw(Error, /Invalid event type/);
+  });
+
+  it('refuses to send events where type is not a string', () => {
+    const publish = createPublisher({ stream: 'my-stream' });
+
+    expect(() => { publish({ type: 5, data: {} }) }).to.throw(Error, /Invalid event type/);
+  });
+
+  it('refuses to send events where type is blank', () => {
+    const publish = createPublisher({ stream: 'my-stream' });
+
+    expect(() => { publish({ type: '', data: {} }) }).to.throw(Error, /Invalid event type/);
   });
 
   it('refuses to send events without data', () => {
     const publish = createPublisher({ stream: 'my-stream' });
 
-    expect(() => { publish({ type: {} }) }).to.throw(Error, /No event data defined./);
+    expect(() => { publish({ type: 'some-type' }) }).to.throw(Error, /No event data defined./);
   });
 });

@@ -11,8 +11,8 @@ const validateSettings = settings => {
 }
 
 const validateEvent = event => {
-  if (!event.type) {
-    throw new Error('No event type defined.')
+  if (typeof event.type !== 'string' || event.type.length === 0) {
+    throw new Error('Invalid event type')
   }
 
   if (!event.data) {
