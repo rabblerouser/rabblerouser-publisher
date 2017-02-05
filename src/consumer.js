@@ -8,7 +8,17 @@ const validateEventHandler = (eventType, handler) => {
   if (!handler || typeof handler !== 'function') {
     throw new Error('Invalid event handler.');
   }
-}
+};
+
+const parseRequestBody = body => {
+  if (!body) return null;
+  if (!body.data) return null;
+  try {
+    return JSON.parse(new Buffer(body.data, 'base64'));
+  } catch(e) {
+    return null;
+  }
+};
 
 const createConsumer = (settings) => {
   const eventHandlers = {};
@@ -18,9 +28,9 @@ const createConsumer = (settings) => {
       return res.status(401).json({ error: 'Invalid Authorization header' });
     }
 
-    const event = req.body;
+    const event = parseRequestBody(req.body);
     if (!event) {
-      return res.status(500).json({ error: 'something went wrong!' });
+      return res.status(400).json({ error: 'Missing or invalid request body' });
     }
 
     const eventHandler = eventHandlers[event.type];
