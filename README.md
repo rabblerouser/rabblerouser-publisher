@@ -45,16 +45,16 @@ streamClient.publish(event)
   .then(result => { ... })
   .catch(error => { ... });
 
-// You can also receive events using a middleware. You would typically bind this to an HTTP endpoint
-myExpressJsApp.post('/events', streamClient.consumer);
-
-// Then you can set up specific handlers for specific event types. Notice that we only receive the `data` here.
+// You can also set up handlers for specific event types. Notice that we only receive the `data` here.
 // Event handlers must return a resolved promise if the event handling succeeded, or a rejected promise if they fail to
 // process the event. This will cause the event to re-sent until it succeeds.
 streamClient.consumer.on('member-registered', data => {
   console.log('Registering a new member called:', data.name);
   return Promise.resolve();
 });
+
+// *After* binding all your event handlers, you can then bind the consumer itself to an HTTP POST endpoint.
+myExpressJsApp.post('/events', streamClient.consumer);
 ```
 
 ## API Reference
@@ -90,7 +90,7 @@ The `handler` will be passed only the `data` field of the received object (not t
 should return a Promise. The resolution of that promise will be used to indicate whether or not the event was processed
 successfully. Events that fail to process will be retried again until they succeed. *This may change in the future, see
 [this issue](https://github.com/rabblerouser/rabblerouser-core/issues/132) for more discussion of event failures, and
-how we might address the problem of invalid events that can never succeed*
+how we might address the problem of invalid events that can never succeed, and would thus clog the stream*
 
 ## Demo
 
