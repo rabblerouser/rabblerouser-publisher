@@ -45,16 +45,16 @@ streamClient.publish(event)
   .then(result => { ... })
   .catch(error => { ... });
 
-// You can also set up handlers for specific event types. Notice that we only receive the `data` here.
+// You can also set up handlers for receiving events of specific types. Notice that we only receive the `data` here.
 // Event handlers must return a resolved promise if the event handling succeeded, or a rejected promise if they fail to
 // process the event. This will cause the event to re-sent until it succeeds.
-streamClient.consumer.on('member-registered', data => {
+streamClient.on('member-registered', data => {
   console.log('Registering a new member called:', data.name);
   return Promise.resolve();
 });
 
-// *After* binding all your event handlers, you can then bind the consumer itself to an HTTP POST endpoint.
-myExpressJsApp.post('/events', streamClient.consumer);
+// *After* binding all your event handlers, you can then listen for events on an HTTP POST endpoint.
+myExpressJsApp.post('/events', streamClient.listen({ replayHistory: true }));
 ```
 
 ## API Reference
@@ -64,11 +64,23 @@ myExpressJsApp.post('/events', streamClient.consumer);
 Accepts an object with a `type` (which must be a non-empty string), and `data` (which must be `JSON.stringify`-able).
 Sends a `PutRecord` request to kinesis containing these two fields. Other fields on the event are ignored.
 
-### `consumer`
+### `on`
 
-A function that should be bound to an HTTP POST endpoint. It expects to receive an express.js `(req, res)` pair. The
-incoming request must have an `Authorization` header that matches the `eventAuthToken` that was specified when creating
-the stream client. The request body must have the following structure:
+Accepts an `eventType` string, and a `handler` function that will be called whenever an event of that type is received.
+The `handler` will be passed only the `data` field of the received object (not the type, or any of the metadata), and it
+should return a Promise. The resolution of that promise will be used to indicate whether or not the event was processed
+successfully. Events that fail to process will be retried again until they succeed. *This may change in the future, see
+[this issue](https://github.com/rabblerouser/rabblerouser-core/issues/132) for more discussion of event failures, and
+how we might address the problem of invalid events that can never succeed, and would thus clog the stream*
+
+### `listen`
+
+When called, the stream client will then be able to receive events and pass them to handlers. This function should only
+be called *after* all `on` calls have been made, so that events do not skip their handlers.
+
+Returns an express.js middleware that should be bound to an HTTP POST endpoint. Incoming requests must have an
+`Authorization` header that matches the `eventAuthToken` that was specified when creating the stream client. Request
+bodies must have the following structure:
 
 ```json
 {
@@ -82,15 +94,6 @@ the stream client. The request body must have the following structure:
 
 The `data` field will be decoded and parsed, resulting in an event object with `type` and `data` attributes as described
 above.
-
-### `consumer.on`
-
-Accepts an `eventType` string, and a `handler` function that will be called whenever an event of that type is received.
-The `handler` will be passed only the `data` field of the received object (not the type, or any of the metadata), and it
-should return a Promise. The resolution of that promise will be used to indicate whether or not the event was processed
-successfully. Events that fail to process will be retried again until they succeed. *This may change in the future, see
-[this issue](https://github.com/rabblerouser/rabblerouser-core/issues/132) for more discussion of event failures, and
-how we might address the problem of invalid events that can never succeed, and would thus clog the stream*
 
 ## Demo
 

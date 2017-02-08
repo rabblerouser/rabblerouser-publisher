@@ -5,11 +5,11 @@ describe('createStream', () => {
     expect(createClient({ stream: 'a-stream' }).publish).to.be.a('function');
   });
 
-  it('has a consumer function to receive events', () => {
-    expect(createClient({ stream: 'a-stream' }).consumer).to.be.a('function');
+  it('has a listen function to receive events', () => {
+    expect(createClient({ stream: 'a-stream' }).listen).to.be.a('function');
   });
 
   it('has a way to subscribe to particular event types', () => {
-    expect(createClient({ stream: 'a-stream' }).consumer.on).to.be.a('function');
+    expect(createClient({ stream: 'a-stream' }).on).to.be.a('function');
   });
 });
