@@ -32,48 +32,53 @@ describe('consumer', () => {
   });
 
   it('rejects the event if the auth header is missing', () => {
-    consumer.listen({})({ header: () => undefined, body: { type: 'some-event-type', data: { some: 'data' } } }, res);
-
-    expect(res.status).to.have.been.calledWith(401);
+    const req = { header: () => undefined, body: { type: 'some-event-type', data: { some: 'data' } } };
+    return consumer.listen({})(req, res).then(() => {
+      expect(res.status).to.have.been.calledWith(401);
+    });
   });
 
   it('rejects the event if the auth header is wrong', () => {
-    consumer.listen({})({ header: () => 'wrong', body: { type: 'some-event-type', data: { some: 'data' } } }, res);
-
-    expect(res.status).to.have.been.calledWith(401);
+    const req = { header: () => 'wrong', body: { type: 'some-event-type', data: { some: 'data' } } };
+    return consumer.listen({})(req, res).then(() => {
+      expect(res.status).to.have.been.calledWith(401);
+    });
   });
 
   it('rejects the event if the request has no body', () => {
-    consumer.listen({})({ header }, res);
-
-    expect(res.status).to.have.been.calledWith(400);
+    const req = { header };
+    return consumer.listen({})(req, res).then(() => {
+      expect(res.status).to.have.been.calledWith(400);
+    });
   });
 
   it('rejects the event if the request body has no data', () => {
-    consumer.listen({})({ header, body: {} }, res);
-
-    expect(res.status).to.have.been.calledWith(400);
+    const req = { header, body: {} };
+    return consumer.listen({})(req, res).then(() => {
+      expect(res.status).to.have.been.calledWith(400);
+    });
   });
 
   it('rejects the event if the request body data is not a base64-encoded JSON string', () => {
-    consumer.listen({})({ header, body: { data: "bad data" } }, res);
-
-    expect(res.status).to.have.been.calledWith(400);
+    const req = { header, body: { data: "bad data" } };
+    return consumer.listen({})(req, res).then(() => {
+      expect(res.status).to.have.been.calledWith(400);
+    });
   });
 
   it('succeeds if there is no handler that matches the given event', () => {
-    const event = { type: 'ignore-me', data: {} };
-    consumer.listen({})({ header, body: requestBody(event) }, res);
-
-    expect(res.sendStatus).to.have.been.calledWith(204);
+    const req = { header, body: requestBody({ type: 'ignore-me', data: {} }) };
+    return consumer.listen({})(req, res).then(() => {
+      expect(res.sendStatus).to.have.been.calledWith(204);
+    });
   });
 
   it('succeeds and sends the event data when there is a registered handler', () => {
     const eventHandler = sinon.stub().returns(Promise.resolve());
     consumer.on('some-event-type', eventHandler);
 
-    const event = { type: 'some-event-type', data: { some: 'data' } };
-    return consumer.listen({})({ header, body: requestBody(event) }, res).then(() => {
+    const req = { header, body: requestBody({ type: 'some-event-type', data: { some: 'data' } }) };
+    return consumer.listen({})(req, res).then(() => {
       expect(eventHandler).to.have.been.calledWith({ some: 'data' });
       expect(res.sendStatus).to.have.been.calledWith(200);
     });

@@ -20,32 +20,36 @@ const parseRequestBody = body => {
   }
 };
 
+const checkAuth = eventAuthToken => req  => {
+  if (!req.header('Authorization') || req.header('Authorization') !== eventAuthToken) {
+    throw { status: 401, error: 'Invalid Authorization header' };
+  }
+  return req;
+};
+
+const parseEvent = req => {
+  const event = parseRequestBody(req.body);
+  if (!event) {
+    throw { status: 400, error: 'Missing or invalid request body' };
+  }
+  return event;
+};
+
+const handleEvent = eventHandlers => event => {
+  const eventHandler = eventHandlers[event.type];
+  if (!eventHandler) {
+    process.env.NODE_ENV !== 'test' && console.log('Ignoring event:', event);
+    return 204;
+  }
+  process.env.NODE_ENV !== 'test' && console.log('Handling event:', event);
+  return eventHandler(event.data).then(
+    () => 200,
+    error => { throw { status: 500, error }; }
+  );
+};
+
 const createConsumer = ({ eventAuthToken }) => {
   const eventHandlers = {};
-  const listen = () => {
-    return (req, res) => {
-      if (!req.header('Authorization') || req.header('Authorization') !== eventAuthToken) {
-        return res.status(401).json({ error: 'Invalid Authorization header' });
-      }
-
-      const event = parseRequestBody(req.body);
-      if (!event) {
-        return res.status(400).json({ error: 'Missing or invalid request body' });
-      }
-
-      const eventHandler = eventHandlers[event.type];
-      if (!eventHandler) {
-        process.env.NODE_ENV !== 'test' && console.log('Ignoring event:', event);
-        return res.sendStatus(204);;
-      }
-
-      process.env.NODE_ENV !== 'test' && console.log('Handling event:', event);
-      return eventHandler(event.data).then(
-        () => res.sendStatus(200),
-        error => res.status(500).json({ error })
-      );
-    };
-  };
 
   const on = (eventType, handler) => {
     validateEventHandler(eventType, handler);
@@ -53,7 +57,18 @@ const createConsumer = ({ eventAuthToken }) => {
     eventHandlers[eventType] = handler;
   };
 
-  return { listen, on };
+  const listen = () => {
+    return (req, res) => {
+      return Promise.resolve(req)
+        .then(checkAuth(eventAuthToken))
+        .then(parseEvent)
+        .then(handleEvent(eventHandlers))
+        .then(status => res.sendStatus(status))
+        .catch(({ status, error }) => res.status(status).json({ error }));
+    };
+  };
+
+  return { on, listen };
 };
 
 
