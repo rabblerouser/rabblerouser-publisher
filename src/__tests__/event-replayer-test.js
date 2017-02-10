@@ -30,11 +30,11 @@ describe('eventReplayer', () => {
       IsTruncated: false,
       Contents: [{ Key: '2017-01-06_13' }],
     }));
-    const event1 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Kirk\\"}}","sequenceNumber":"1"}\n`;
-    const event2 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Picard\\"}}","sequenceNumber":"2"}\n`;
-    const event3 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Sisko\\"}}","sequenceNumber":"3"}\n`;
-    const event4 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Janeway\\"}}","sequenceNumber":"4"}\n`;
-    const event5 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Archer\\"}}","sequenceNumber":"5"}\n`;
+    const event1 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Kirk\\"}}","sequenceNumber":1}\n`;
+    const event2 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Picard\\"}}","sequenceNumber":2}\n`;
+    const event3 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Sisko\\"}}","sequenceNumber":3}\n`;
+    const event4 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Janeway\\"}}","sequenceNumber":4}\n`;
+    const event5 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Archer\\"}}","sequenceNumber":5}\n`;
     const object1 = `${event1}${event2}`;
     const object2 = `${event3}`;
     const object3 = `${event4}${event5}`;
@@ -42,14 +42,32 @@ describe('eventReplayer', () => {
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_12' }).returns(awsResponse({ Body: object2 }));
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_13' }).returns(awsResponse({ Body: object3 }));
 
-    const handleEvent = sandbox.spy();
+    const handleEvent = sandbox.stub().returns(Promise.resolve());
     return eventReplayer.replayEvents('archive-bucket', handleEvent).then(() => {
-      expect(handleEvent).to.have.been.calledWith({ type: 'reg', data: { name: 'Kirk' } });
-      expect(handleEvent).to.have.been.calledWith({ type: 'reg', data: { name: 'Picard' } });
-      expect(handleEvent).to.have.been.calledWith({ type: 'reg', data: { name: 'Sisko' } });
-      expect(handleEvent).to.have.been.calledWith({ type: 'reg', data: { name: 'Janeway' } });
-      expect(handleEvent).to.have.been.calledWith({ type: 'reg', data: { name: 'Archer' } });
+      expect(handleEvent).to.have.been.calledWith(1, { type: 'reg', data: { name: 'Kirk' } });
+      expect(handleEvent).to.have.been.calledWith(2, { type: 'reg', data: { name: 'Picard' } });
+      expect(handleEvent).to.have.been.calledWith(3, { type: 'reg', data: { name: 'Sisko' } });
+      expect(handleEvent).to.have.been.calledWith(4, { type: 'reg', data: { name: 'Janeway' } });
+      expect(handleEvent).to.have.been.calledWith(5, { type: 'reg', data: { name: 'Archer' } });
       expect(handleEvent.callCount).to.eql(5);
+    });
+  });
+
+  it('retries events that fail temporarily', () => {
+    s3.listObjectsV2.withArgs({ Bucket: 'archive-bucket', ContinuationToken: undefined }).returns(awsResponse({
+      IsTruncated: false,
+      Contents: [{ Key: '2017-01-06_11' }],
+    }));
+    const event = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Kirk\\"}}","sequenceNumber":1}\n`;
+    s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_11' }).returns(awsResponse({ Body: event }));
+
+    const handleEvent = sandbox.stub();
+    handleEvent.onCall(0).returns(Promise.reject());
+    handleEvent.onCall(1).returns(Promise.reject());
+    handleEvent.onCall(2).returns(Promise.resolve());
+    return eventReplayer.replayEvents('archive-bucket', handleEvent).then(() => {
+      expect(handleEvent).to.have.been.calledWith(1, { type: 'reg', data: { name: 'Kirk' } });
+      expect(handleEvent.callCount).to.eql(3);
     });
   });
 });

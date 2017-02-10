@@ -3,12 +3,20 @@ const AWS = require('aws-sdk');
 const replayEvents = (archiveBucket, eventHandler) => {
   const s3 = new AWS.S3();
 
+  const handleEvent = event => {
+    const parsedEvent = JSON.parse(event);
+    const eventData = JSON.parse(parsedEvent.data)
+    return eventHandler(parsedEvent.sequenceNumber, eventData)
+      .catch(error => {
+        process.env.NODE_ENV !== 'test' && console.log('Handling event failed:', error);
+        return handleEvent(event);
+      });
+  };
+
   const fetchAndReplayObject = ({ Key }) => (
     s3.getObject({ Bucket: archiveBucket, Key }).promise().then(object => {
       const events = object.Body.toString().trim().split('\n');
-      events.forEach(event =>
-        eventHandler(JSON.parse(JSON.parse(event).data))
-      );
+      return Promise.all(events.map(handleEvent));
     })
   );
 
