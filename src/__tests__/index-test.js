@@ -1,3 +1,4 @@
+'use strict';
 const createClient = require('..');
 
 describe('createStream', () => {

@@ -53,8 +53,9 @@ streamClient.on('member-registered', data => {
   return Promise.resolve();
 });
 
-// *After* binding all your event handlers, you can then listen for events on an HTTP POST endpoint.
-myExpressJsApp.post('/events', streamClient.listen({ replayHistory: true }));
+// *After* binding all your event handlers, you can then listen for events on an HTTP POST endpoint. You can also
+// optionally specify a bucket where historical events should be read from first.
+myExpressJsApp.post('/events', streamClient.listen({ archiveBucket: 'my-archive-bucket' }));
 ```
 
 ## API Reference
@@ -75,8 +76,12 @@ how we might address the problem of invalid events that can never succeed, and w
 
 ### `listen`
 
-When called, the stream client will then be able to receive events and pass them to handlers. This function should only
-be called *after* all `on` calls have been made, so that events do not skip their handlers.
+When called, the stream client will then be able to receive events and pass them to handlers. Takes in `options`, which
+right now only consists of `archiveBucket`, which specifies the S3 bucket where the client should read historical events
+from, before accepting any new events from the stream. If not given, then it will begin listening for new events
+immediately.
+
+This function should only be called *after* all `on` calls have been made, so that events do not skip their handlers.
 
 Returns an express.js middleware that should be bound to an HTTP POST endpoint. Incoming requests must have an
 `Authorization` header that matches the `eventAuthToken` that was specified when creating the stream client. Request

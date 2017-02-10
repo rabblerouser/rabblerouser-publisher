@@ -1,4 +1,6 @@
+'use strict';
 const createConsumer = require('../consumer');
+const eventReplayer = require('../event-replayer');
 
 describe('consumer', () => {
   let sandbox;
@@ -8,6 +10,7 @@ describe('consumer', () => {
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
+    sandbox.stub(eventReplayer, 'replayEvents');
     res = {
       status: sinon.stub().returns({ json: sinon.spy() }),
       sendStatus: sinon.spy(),
@@ -63,6 +66,38 @@ describe('consumer', () => {
     const req = { header, body: { data: "bad data" } };
     return consumer.listen({})(req, res).then(() => {
       expect(res.status).to.have.been.calledWith(400);
+    });
+  });
+
+  it('rejects the event if currently replaying history from elsewhere', () => {
+    eventReplayer.replayEvents.returns(Promise.resolve());
+    const req = { header, body: requestBody({ type: 'ignore-me', data: {} }) };
+    return consumer.listen({ archiveBucket: 'myBucket' })(req, res).then(() => {
+      expect(res.status).to.have.been.calledWith(503);
+    });
+  });
+
+  it('accepts events after the replaying finishes', () => {
+    eventReplayer.replayEvents.returns(Promise.resolve());
+    const req = { header, body: requestBody({ type: 'ignore-me', data: {} }) };
+
+    const middleware = consumer.listen({ archiveBucket: 'myBucket' });
+    return Promise.resolve().then(() => (
+      middleware(req, res)
+    )).then(() => {
+      expect(res.sendStatus).to.have.been.calledWith(204);
+    });
+  });
+
+  it('will never accept events if the replaying fails', () => {
+    eventReplayer.replayEvents.returns(Promise.reject());
+    const req = { header, body: requestBody({ type: 'ignore-me', data: {} }) };
+
+    const middleware = consumer.listen({ archiveBucket: 'myBucket' });
+    return Promise.resolve().then(() => (
+      middleware(req, res)
+    )).then(() => {
+      expect(res.status).to.have.been.calledWith(503);
     });
   });
 

@@ -1,4 +1,5 @@
 'use strict';
+const eventReplayer = require('./event-replayer');
 
 const validateEventHandler = (eventType, handler) => {
   if (!eventType) {
@@ -19,6 +20,13 @@ const parseRequestBody = body => {
     return null;
   }
 };
+
+const rejectNewEventsWhileReplaying = replaying => req => {
+  if (replaying) {
+    throw { status: 503, error: 'Currently replaying historical events. Try again soon.' }
+  }
+  return req;
+}
 
 const checkAuth = eventAuthToken => req  => {
   if (!req.header('Authorization') || req.header('Authorization') !== eventAuthToken) {
@@ -50,16 +58,23 @@ const handleEvent = eventHandlers => event => {
 
 const createConsumer = ({ eventAuthToken }) => {
   const eventHandlers = {};
+  let replaying = false;
 
   const on = (eventType, handler) => {
     validateEventHandler(eventType, handler);
-
     eventHandlers[eventType] = handler;
   };
 
-  const listen = () => {
+  const listen = ({ archiveBucket }) => {
+    if (archiveBucket) {
+      replaying = true;
+      eventReplayer.replayEvents(archiveBucket, handleEvent(eventHandlers)).then(() => {
+        replaying = false;
+      }).catch(() => {}); // Replay never finishes if it fails
+    }
     return (req, res) => {
       return Promise.resolve(req)
+        .then(rejectNewEventsWhileReplaying(replaying))
         .then(checkAuth(eventAuthToken))
         .then(parseEvent)
         .then(handleEvent(eventHandlers))
