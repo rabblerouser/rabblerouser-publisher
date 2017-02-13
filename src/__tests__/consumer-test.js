@@ -1,5 +1,5 @@
 'use strict';
-const createConsumer = require('../consumer');
+const Consumer = require('../consumer');
 const eventReplayer = require('../event-replayer');
 
 describe('consumer', () => {
@@ -15,7 +15,7 @@ describe('consumer', () => {
       status: sinon.stub().returns({ json: sinon.spy() }),
       sendStatus: sinon.spy(),
     };
-    consumer = createConsumer({ eventAuthToken: 'secret' });
+    consumer = new Consumer({ eventAuthToken: 'secret' });
   });
 
   afterEach(() => {
@@ -73,7 +73,7 @@ describe('consumer', () => {
   });
 
   it('rejects the event if currently replaying history from elsewhere', () => {
-    eventReplayer.replayEvents.returns(Promise.resolve());
+    eventReplayer.replayEvents.returns(new Promise(() => {}));
     const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
     return consumer.listen({ archiveBucket: 'myBucket' })(req, res).then(() => {
       expect(res.status).to.have.been.calledWith(503);

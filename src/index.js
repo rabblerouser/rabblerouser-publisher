@@ -1,8 +1,8 @@
 const createPublisher = require('./publisher');
-const createConsumer = require('./consumer');
+const Consumer = require('./consumer');
 
 const createClient = (settings) => {
-  const consumer = createConsumer(settings);
+  const consumer = new Consumer(settings);
   return {
     publish: createPublisher(settings),
     on: consumer.on,
