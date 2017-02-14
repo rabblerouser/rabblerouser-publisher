@@ -1,6 +1,6 @@
 # rabblerouser-stream-client
 
-Rabble Rouser's kinesis stream client. It publishes and consumes events.
+Rabble Rouser's kinesis stream client. It publishes and listens for events.
 
 ## Installation
 
@@ -30,9 +30,9 @@ const settings = {
 };
 const streamClient = createClient(settings);
 
-// Each event must have a `type`. This is used for consumers to decide whether they are
+// Each event must have a `type`. This is used for listeners to decide whether they are
 // interested in the event, and it will also be used by kinesis for sharding of events.
-// The event can also have `data`, which is what consumers will ultimately receive.
+// The event can also have `data`, which is what listeners will ultimately receive.
 var event = {
   type: 'member-registered',
   data: {

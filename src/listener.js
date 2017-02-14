@@ -1,7 +1,7 @@
 'use strict';
 const eventReplayer = require('./event-replayer');
 
-class Consumer {
+class Listener {
   constructor({eventAuthToken}) {
     this.eventHandlers = {};
     this.replaying = false;
@@ -22,7 +22,7 @@ class Consumer {
     this.eventHandlers[eventType] = handler;
   }
 
-  listen({ archiveBucket }) {
+  listen({ archiveBucket }={}) {
     if (archiveBucket) {
       this.replaying = true;
       eventReplayer.replayEvents(archiveBucket, this._bucketEventHandler).then(() => {
@@ -113,4 +113,4 @@ const parseRequestBody = body => {
   }
 };
 
-module.exports = Consumer;
+module.exports = Listener;

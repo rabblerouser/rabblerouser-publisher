@@ -8,10 +8,10 @@ const streamClient = createClient({ region: 'ap-southeast-2', stream: 'rabblerou
 const app = express();
 app.use(bodyParser.json());
 
-app.post('/events', streamClient.consumer);
-streamClient.consumer.on('member-registered', data => {
+streamClient.on('member-registered', data => {
   console.log('Registered a new member called:', data.name);
 });
+app.post('/events', streamClient.listen());
 
 app.post('/register', (req, res) => {
   console.log(req.body);
@@ -35,6 +35,6 @@ app.listen(3030, function () {
   console.log(`curl -X POST localhost:3030/register -H 'Content-Type: application/json' -d '{ "name": "Jane Doe" }'`);
   console.log('');
   console.log('I will also for events coming off the stream. If you do not have a forwarder set up, you manually send me one like this:');
-  console.log(`curl -X POST localhost:3030/events -H 'Content-Type: application/json' -d '{ "type": "member-registered", "data": { "name": "Jane Doe" } }' `)
+  console.log(`curl -X POST localhost:3030/events -H 'Content-Type: application/json' -H 'Authorization: secret' -d '{ "type": "member-registered", "data": { "name": "Jane Doe" } }' `)
   console.log('');
 });

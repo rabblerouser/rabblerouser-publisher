@@ -1,12 +1,12 @@
 const createPublisher = require('./publisher');
-const Consumer = require('./consumer');
+const Listener = require('./listener');
 
 const createClient = (settings) => {
-  const consumer = new Consumer(settings);
+  const listener = new Listener(settings);
   return {
     publish: createPublisher(settings),
-    on: consumer.on,
-    listen: consumer.listen,
+    on: listener.on,
+    listen: listener.listen,
   };
 };
 

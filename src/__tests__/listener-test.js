@@ -1,11 +1,11 @@
 'use strict';
-const Consumer = require('../consumer');
+const Listener = require('../listener');
 const eventReplayer = require('../event-replayer');
 
-describe('consumer', () => {
+describe('listener', () => {
   let sandbox;
   let res;
-  let consumer;
+  let listener;
   const header = () => 'secret';
 
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe('consumer', () => {
       status: sinon.stub().returns({ json: sinon.spy() }),
       sendStatus: sinon.spy(),
     };
-    consumer = new Consumer({ eventAuthToken: 'secret' });
+    listener = new Listener({ eventAuthToken: 'secret' });
   });
 
   afterEach(() => {
@@ -28,46 +28,46 @@ describe('consumer', () => {
   });
 
   it('refuses to register an event handler to no event type', () => {
-    expect(() => { consumer.on('', () => {}) }).to.throw(Error, /No event type defined for handler./);
-    expect(() => { consumer.on(null, () => {}) }).to.throw(Error, /No event type defined for handler./);
+    expect(() => { listener.on('', () => {}) }).to.throw(Error, /No event type defined for handler./);
+    expect(() => { listener.on(null, () => {}) }).to.throw(Error, /No event type defined for handler./);
   });
 
   it('refuses to register event handlers that are not functions', () => {
-    expect(() => { consumer.on('event-type') }).to.throw(Error, /Invalid event handler./);
-    expect(() => { consumer.on('event-type', 5) }).to.throw(Error, /Invalid event handler./);
+    expect(() => { listener.on('event-type') }).to.throw(Error, /Invalid event handler./);
+    expect(() => { listener.on('event-type', 5) }).to.throw(Error, /Invalid event handler./);
   });
 
   it('rejects the event if the auth header is missing', () => {
     const req = { header: () => undefined, body: { type: 'some-event-type', data: { some: 'data' } } };
-    return consumer.listen({})(req, res).then(() => {
+    return listener.listen({})(req, res).then(() => {
       expect(res.status).to.have.been.calledWith(401);
     });
   });
 
   it('rejects the event if the auth header is wrong', () => {
     const req = { header: () => 'wrong', body: { type: 'some-event-type', data: { some: 'data' } } };
-    return consumer.listen({})(req, res).then(() => {
+    return listener.listen({})(req, res).then(() => {
       expect(res.status).to.have.been.calledWith(401);
     });
   });
 
   it('rejects the event if the request has no body', () => {
     const req = { header };
-    return consumer.listen({})(req, res).then(() => {
+    return listener.listen({})(req, res).then(() => {
       expect(res.status).to.have.been.calledWith(400);
     });
   });
 
   it('rejects the event if the request body has no data', () => {
     const req = { header, body: {} };
-    return consumer.listen({})(req, res).then(() => {
+    return listener.listen({})(req, res).then(() => {
       expect(res.status).to.have.been.calledWith(400);
     });
   });
 
   it('rejects the event if the request body data is not a base64-encoded JSON string', () => {
     const req = { header, body: { data: "bad data" } };
-    return consumer.listen({})(req, res).then(() => {
+    return listener.listen({})(req, res).then(() => {
       expect(res.status).to.have.been.calledWith(400);
     });
   });
@@ -75,7 +75,7 @@ describe('consumer', () => {
   it('rejects the event if currently replaying history from elsewhere', () => {
     eventReplayer.replayEvents.returns(new Promise(() => {}));
     const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
-    return consumer.listen({ archiveBucket: 'myBucket' })(req, res).then(() => {
+    return listener.listen({ archiveBucket: 'myBucket' })(req, res).then(() => {
       expect(res.status).to.have.been.calledWith(503);
     });
   });
@@ -84,7 +84,7 @@ describe('consumer', () => {
     eventReplayer.replayEvents.returns(Promise.resolve());
     const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
 
-    const middleware = consumer.listen({ archiveBucket: 'myBucket' });
+    const middleware = listener.listen({ archiveBucket: 'myBucket' });
     return Promise.resolve().then(() => (
       middleware(req, res)
     )).then(() => {
@@ -96,7 +96,7 @@ describe('consumer', () => {
     eventReplayer.replayEvents.returns(Promise.reject());
     const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
 
-    const middleware = consumer.listen({ archiveBucket: 'myBucket' });
+    const middleware = listener.listen({ archiveBucket: 'myBucket' });
     return Promise.resolve().then(() => (
       middleware(req, res)
     )).then(() => {
@@ -106,17 +106,17 @@ describe('consumer', () => {
 
   it('succeeds if there is no handler that matches the given event', () => {
     const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
-    return consumer.listen({})(req, res).then(() => {
+    return listener.listen({})(req, res).then(() => {
       expect(res.sendStatus).to.have.been.calledWith(204);
     });
   });
 
   it('succeeds and sends the event data when there is a registered handler', () => {
     const eventHandler = sinon.stub().returns(Promise.resolve());
-    consumer.on('some-event-type', eventHandler);
+    listener.on('some-event-type', eventHandler);
 
     const req = { header, body: requestBody(0, { type: 'some-event-type', data: { some: 'data' } }) };
-    return consumer.listen({})(req, res).then(() => {
+    return listener.listen({})(req, res).then(() => {
       expect(eventHandler).to.have.been.calledWith({ some: 'data' });
       expect(res.sendStatus).to.have.been.calledWith(200);
     });
@@ -124,10 +124,10 @@ describe('consumer', () => {
 
   it('fails if the event handler fails', () => {
     const eventHandler = sinon.stub().returns(Promise.reject('Error!'));
-    consumer.on('some-event-type', eventHandler);
+    listener.on('some-event-type', eventHandler);
 
     const req = { header, body: requestBody(0, { type: 'some-event-type', data: { some: 'data' } }) }
-    return consumer.listen({})(req, res).then(() => {
+    return listener.listen({})(req, res).then(() => {
       expect(eventHandler).to.have.been.calledWith({ some: 'data' });
       expect(res.status).to.have.been.calledWith(500);
       expect(res.status().json).to.have.been.calledWith({ error: 'Error!' });
@@ -136,10 +136,10 @@ describe('consumer', () => {
 
   it('handles events coming out from the event replayer', () => {
     const eventHandler = sinon.stub().returns(Promise.resolve());
-    consumer.on('some-event-type', eventHandler);
+    listener.on('some-event-type', eventHandler);
 
     eventReplayer.replayEvents.returns(Promise.resolve());
-    consumer.listen({ archiveBucket: 'myBucket' });
+    listener.listen({ archiveBucket: 'myBucket' });
 
     const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
     bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } });
@@ -150,10 +150,10 @@ describe('consumer', () => {
     const eventHandler = sinon.stub()
     eventHandler.onCall(0).returns(Promise.reject());
     eventHandler.onCall(1).returns(Promise.resolve());
-    consumer.on('some-event-type', eventHandler);
+    listener.on('some-event-type', eventHandler);
 
     eventReplayer.replayEvents.returns(Promise.resolve());
-    consumer.listen({ archiveBucket: 'myBucket' });
+    listener.listen({ archiveBucket: 'myBucket' });
 
     const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
     bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } }).catch(() => {});
@@ -164,10 +164,10 @@ describe('consumer', () => {
 
   it('does not double-handle events when the archive and the stream have some overlap', () => {
     const eventHandler = sinon.stub().returns(Promise.resolve());
-    consumer.on('some-event-type', eventHandler);
+    listener.on('some-event-type', eventHandler);
 
     eventReplayer.replayEvents.returns(Promise.resolve());
-    const middleware = consumer.listen({ archiveBucket: 'myBucket' });
+    const middleware = listener.listen({ archiveBucket: 'myBucket' });
 
     const events = [0, 1, 2, 3].map(i => (
       { type: 'some-event-type', data: { some: `data${i}` } }
