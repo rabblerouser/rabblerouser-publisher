@@ -1,6 +1,6 @@
 {
   "name": "rabblerouser-stream-client",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Rabble Rouser's kinesis stream client. It publishes and listens for events.",
   "main": "src/index.js",
   "scripts": {
