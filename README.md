@@ -4,88 +4,107 @@ Rabble Rouser's kinesis stream client. It publishes and listens for events.
 
 ## Installation
 
-Using npm:
-```shell
-$ npm i -g npm
-$ npm i --save rabblerouser-stream-client
+```sh
+npm install --save rabblerouser-stream-client
 ```
 
 ## Usage
 
-First, setup your [AWS config](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html).
-
-Then use it like this:
-
 ```js
 const createClient = require('rabblerouser-stream-client');
 
-// Configure with your kinesis settings. See https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Kinesis.html#constructor-property
-const settings = {
-  apiVersion: '2013-12-02',
+// This is the complete config, not everything is required (see API reference below)
+const streamClient = createClient({
+  publishToStream: 'my-stream',
+  listenWithAuthToken: 'some random token',
+  readArchiveFromBucket: 'my-bucket',
   region: 'ap-southeast-2',
   accessKeyId: 'ABC123',
   secretAccessKey: 'ABC123',
-  stream: 'my-stream',
-  eventAuthToken, 'some random token',
-};
-const streamClient = createClient(settings);
+  kinesisEndpoint: 'http://kinesis:1234',
+  s3Endpoint: 'http://s3:1234',
+});
 
 // Each event must have a `type`. This is used for listeners to decide whether they are
 // interested in the event, and it will also be used by kinesis for sharding of events.
-// The event can also have `data`, which is what listeners will ultimately receive.
-var event = {
+// The event must also have `data`, which is what listeners will ultimately receive.
+const event = {
   type: 'member-registered',
   data: {
     name: 'Jane Doe'
   }
 };
 
-// You can use the stream client to publish events. The publish function returns a Promise
+// Publish an event: (remember to handle errors!)
 streamClient.publish(event)
   .then(result => { ... })
   .catch(error => { ... });
 
-// You can also set up handlers for receiving events of specific types. Notice that we only receive the `data` here.
-// Event handlers must return a resolved promise if the event handling succeeded, or a rejected promise if they fail to
-// process the event. This will cause the event to re-sent until it succeeds.
+// Set up a handler for events of specific types. Notice that we only receive
+// the `data` here. Event handlers must return a resolved promise if the event
+// handling succeeded, or a rejected promise if they fail to process the event.
+// This will cause the event to re-sent until it succeeds.
 streamClient.on('member-registered', data => {
   console.log('Registering a new member called:', data.name);
   return Promise.resolve();
 });
 
-// *After* binding all your event handlers, you can then listen for events on an HTTP POST endpoint. You can also
-// optionally specify a bucket where historical events should be read from first.
-myExpressJsApp.post('/events', streamClient.listen({ archiveBucket: 'my-archive-bucket' }));
+// *After* binding all event handlers, start listening for POSTed events.
+myExpressJsApp.post('/events', streamClient.listen());
 ```
+
+## You need an event forwarder
+
+This library does not directly pull events from kinesis, because Amazon recommend you use a dedicated thread for that,
+which is not really possible with Node.js. This library just helps you create a listener for events that are sent to
+your application via HTTP POST. If you want the listener to be useful, you need something else that polls the kinesis
+stream, and sends you those HTTP requests. That is what [rabblerouser/event-forwarder](https://github.com/rabblerouser/event-forwarder)
+does. See its readme for more details.
 
 ## API Reference
 
-### `publish`
+### `createClient(settings)`
 
-Accepts an object with a `type` (which must be a non-empty string), and `data` (which must be `JSON.stringify`-able).
-Sends a `PutRecord` request to kinesis containing these two fields. Other fields on the event are ignored.
+Creates a new streamClient object. All settings are optional, depending on how you want to use the created client:
+- `publishToStream` (*string*): The name of the kinesis stream where you want to publish events. Required if you want to
+be able to publish events.
+- `listenWithAuthToken` (*string*): The secret token that will be used to authenticate incoming events. Required if you
+want to bind any event handlers, or listen for events.
+- `readArchiveFromBucket` (*string*): The S3 bucket where events will be read from before accepting events from the
+ stream. If not given, then you will only receive new events, not historical ones.
+- `region` (*string*): The region where your kinesis stream and/or S3 bucket are located. Required if either `publishToStream` or `readArchiveFromBucket` are given.
+- `accessKeyId` (*string*): The AWS access key for your kinesis stream and/or S3 bucket. Required if either `publishToStream` or `readArchiveFromBucket` are given.
+- `secretAccessKey` (*string*): The AWS secret key for your kinesis stream and/or S3 bucket. Required if either `publishToStream` or `readArchiveFromBucket` are given.
+- `kinesisEndpoint` (*string*): The endpoint to send kinesis requests to. Useful for developing with e.g. kinesalite.
+- `s3Endpoint` (*string*): The endpoint to send S3 requests to. Useful for developing with e.g. fake-s3.
 
-### `on`
+Returns a `streamClient` object with the following methods:
 
-Accepts an `eventType` string, and a `handler` function that will be called whenever an event of that type is received.
-The `handler` will be passed only the `data` field of the received object (not the type, or any of the metadata), and it
-should return a Promise. The resolution of that promise will be used to indicate whether or not the event was processed
-successfully. Events that fail to process will be retried again until they succeed. *This may change in the future, see
-[this issue](https://github.com/rabblerouser/rabblerouser-core/issues/132) for more discussion of event failures, and
-how we might address the problem of invalid events that can never succeed, and would thus clog the stream*
+### `streamClient.publish(event)`
 
-### `listen`
+Publishes the given event to a kinesis stream. The event must have this structure (other fields are ignored):
+- `type` (*string*): The type of the event.
+- `data` (*object*): The event payload.
 
-When called, the stream client will then be able to receive events and pass them to handlers. Takes in `options`, which
-right now only consists of `archiveBucket`, which specifies the S3 bucket where the client should read historical events
-from, before accepting any new events from the stream. If not given, then it will begin listening for new events
-immediately.
+### `streamClient.on(type, handler)`
 
-This function should only be called *after* all `on` calls have been made, so that events do not skip their handlers.
+Registers a handler for a particular event type. Note that events won't start coming through until you call `listen()`.
+- `type` (*string*): The type of event to listen for.
+- `handler` (*function(`data`)*): The function that will receive the events.
+  - `data` (*object*): The original payload, without the type or any other metadata.
+  - *Returns*: It must return a Promise, whose resolution indicates whether the event was handled successfully. Failed
+  events will be retried again until they succeed. *(This may change in the future, see [here](https://github.com/rabblerouser/rabblerouser-core/issues/132)
+  for more discussion of event failures, and how we might address the problem of invalid events that can never succeed, which would clog the stream)*
 
-Returns an express.js middleware that should be bound to an HTTP POST endpoint. Incoming requests must have an
-`Authorization` header that matches the `eventAuthToken` that was specified when creating the stream client. Request
-bodies must have the following structure:
+### `streamClient.listen()`
+
+Makes the client start processing events. If an archive bucket was specified when creating the client, then it will
+iterate through historical events first. After that it will start processing new events coming in from the stream.
+This function should only be called *after* all `on` calls have been made, so that events do not miss their handlers.
+
+*Returns*: an express.js middleware that should be bound to an HTTP POST endpoint. Requests must have an `Authorization`
+header that matches the auth token that was specified when creating the stream client. Request bodies must have the
+following structure:
 
 ```json
 {
@@ -97,11 +116,4 @@ bodies must have the following structure:
 }
 ```
 
-The `data` field will be decoded and parsed, resulting in an event object with `type` and `data` attributes as described
-above.
-
-## Demo
-
-First, setup your [AWS config](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html).
-
-`npm run demo`
+The `data` field, when decoded and parsed, must contain an event object with `type` and `data` attributes as described above.

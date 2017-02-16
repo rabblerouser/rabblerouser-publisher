@@ -4,6 +4,13 @@ const eventReplayer = require('../event-replayer');
 describe('eventReplayer', () => {
   let sandbox;
   let s3;
+  const bucketSettings = {
+    bucket: 'archive-bucket',
+    region: 'ap-southeast-2',
+    accessKeyId: 'ABC123',
+    secretAccessKey: 'ABC123',
+    endpoint: 'http://s3:1234',
+  };
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
@@ -19,6 +26,20 @@ describe('eventReplayer', () => {
   });
 
   const awsResponse = data => ({ promise: () => Promise.resolve(data) });
+
+  it('initialises S3 with the right settings', () => {
+    s3.listObjectsV2.returns(awsResponse({ IsTruncated: false, Contents: [] }));
+
+    eventReplayer.replayEvents(bucketSettings, () => Promise.resolve());
+
+    expect(AWS.S3).to.have.been.calledWith({
+      region: 'ap-southeast-2',
+      accessKeyId: 'ABC123',
+      secretAccessKey: 'ABC123',
+      endpoint: 'http://s3:1234',
+      s3ForcePathStyle: true,
+    });
+  });
 
   it('dispatches multiple events from multiple objects from multiple listObject calls', () => {
     s3.listObjectsV2.withArgs({ Bucket: 'archive-bucket', ContinuationToken: undefined }).returns(awsResponse({
@@ -43,7 +64,7 @@ describe('eventReplayer', () => {
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_13' }).returns(awsResponse({ Body: object3 }));
 
     const handleEvent = sandbox.stub().returns(Promise.resolve());
-    return eventReplayer.replayEvents('archive-bucket', handleEvent).then(() => {
+    return eventReplayer.replayEvents(bucketSettings, handleEvent).then(() => {
       expect(handleEvent).to.have.been.calledWith(1, { type: 'reg', data: { name: 'Kirk' } });
       expect(handleEvent).to.have.been.calledWith(2, { type: 'reg', data: { name: 'Picard' } });
       expect(handleEvent).to.have.been.calledWith(3, { type: 'reg', data: { name: 'Sisko' } });
@@ -65,7 +86,7 @@ describe('eventReplayer', () => {
     handleEvent.onCall(0).returns(Promise.reject());
     handleEvent.onCall(1).returns(Promise.reject());
     handleEvent.onCall(2).returns(Promise.resolve());
-    return eventReplayer.replayEvents('archive-bucket', handleEvent).then(() => {
+    return eventReplayer.replayEvents(bucketSettings, handleEvent).then(() => {
       expect(handleEvent).to.have.been.calledWith(1, { type: 'reg', data: { name: 'Kirk' } });
       expect(handleEvent.callCount).to.eql(3);
     });

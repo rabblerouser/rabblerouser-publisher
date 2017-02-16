@@ -2,11 +2,18 @@
 const eventReplayer = require('./event-replayer');
 
 class Listener {
-  constructor({eventAuthToken}) {
+  constructor(settings) {
+    this.authToken = settings.listenWithAuthToken;
+    this.archiveBucketSettings = settings.readArchiveFromBucket ? {
+      bucket: settings.readArchiveFromBucket,
+      region: settings.region,
+      accessKeyId: settings.accessKeyId,
+      secretAccessKey: settings.secretAccessKey,
+      endpoint: settings.s3Endpoint,
+    } : null;
     this.eventHandlers = {};
     this.replaying = false;
     this.lastSequenceNumberFromBucket = -1;
-    this.eventAuthToken = eventAuthToken;
 
     this.on = this.on.bind(this);
     this.listen = this.listen.bind(this);
@@ -17,15 +24,15 @@ class Listener {
     this._parseEvent = this._parseEvent.bind(this);
   }
 
-  on(eventType, handler) {
-    validateEventHandler(eventType, handler);
-    this.eventHandlers[eventType] = handler;
+  on(type, handler) {
+    validateEventHandler(type, handler);
+    this.eventHandlers[type] = handler;
   }
 
-  listen({ archiveBucket }={}) {
-    if (archiveBucket) {
+  listen() {
+    if (this.archiveBucketSettings) {
       this.replaying = true;
-      eventReplayer.replayEvents(archiveBucket, this._bucketEventHandler).then(() => {
+      eventReplayer.replayEvents(this.archiveBucketSettings, this._bucketEventHandler).then(() => {
         this.replaying = false;
       }).catch(() => {}); // Replay never finishes if it fails
     }
@@ -48,7 +55,7 @@ class Listener {
   }
 
   _checkAuth(req) {
-    if (!req.header('Authorization') || req.header('Authorization') !== this.eventAuthToken) {
+    if (!req.header('Authorization') || req.header('Authorization') !== this.authToken) {
       throw { status: 401, error: 'Invalid Authorization header' };
     }
     return req;
@@ -89,8 +96,8 @@ class Listener {
   };
 }
 
-const validateEventHandler = (eventType, handler) => {
-  if (!eventType) {
+const validateEventHandler = (type, handler) => {
+  if (!type) {
     throw new Error('No event type defined for handler.');
   }
 
@@ -113,4 +120,23 @@ const parseRequestBody = body => {
   }
 };
 
-module.exports = Listener;
+const createListener = settings => {
+  if (!settings.listenWithAuthToken) {
+    // It's ok to not specify a token - you just won't be able to listen for events
+    const throwError = msg => () => { throw new Error(msg); };
+    return {
+      on: throwError('Cannot register an event handler - stream client was configured without listenWithAuthToken'),
+      listen: throwError('Cannot listen for events - stream client was configured without listenWithAuthToken'),
+    };
+  }
+  if (settings.readArchiveFromBucket) {
+    // Bucket is not required, but if you *do* specify one, then you need these settings too
+    if (!settings.region) { throw new Error('Settings contains an archive bucket but no region'); }
+    if (!settings.accessKeyId) { throw new Error('Settings contains an archive bucket but no accessKeyId'); }
+    if (!settings.secretAccessKey) { throw new Error('Settings contains an archive bucket but no secretAccessKey'); }
+
+  }
+  return new Listener(settings);
+}
+
+module.exports = createListener;

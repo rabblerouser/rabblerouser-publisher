@@ -1,13 +1,14 @@
 const createPublisher = require('./publisher');
-const Listener = require('./listener');
+const createListener = require('./listener');
 
 const createClient = (settings) => {
-  const listener = new Listener(settings);
-  return {
-    publish: createPublisher(settings),
-    on: listener.on,
-    listen: listener.listen,
-  };
+  if (!settings) { throw new Error('No settings defined'); }
+  if (typeof settings !== 'object') { throw new Error('Settings must be an object'); }
+
+  const publish = createPublisher(settings);
+  const { on, listen } = createListener(settings);
+
+  return { publish, on, listen };
 };
 
 module.exports = createClient;

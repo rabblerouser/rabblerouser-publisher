@@ -2,15 +2,16 @@
 const createClient = require('..');
 
 describe('createStream', () => {
-  it('has a method to publish events to the stream', () => {
-    expect(createClient({ stream: 'a-stream' }).publish).to.be.a('function');
+  it('requires settings as an object', () => {
+    expect(() => { createClient() }).to.throw(Error, /No settings defined/);
+    expect(() => { createClient('hey') }).to.throw(Error, /Settings must be an object/);
   });
 
-  it('has a listen function to receive events', () => {
-    expect(createClient({ stream: 'a-stream' }).listen).to.be.a('function');
-  });
+  it('returns an object with all the right methods', () => {
+    const streamClient = createClient({});
 
-  it('has a way to subscribe to particular event types', () => {
-    expect(createClient({ stream: 'a-stream' }).on).to.be.a('function');
-  });
+    expect(streamClient.publish).to.be.a('function');
+    expect(streamClient.on).to.be.a('function');
+    expect(streamClient.listen).to.be.a('function');
+  })
 });
