@@ -3,7 +3,7 @@ const AWS = require('aws-sdk');
 const replayEvents = (bucketSettings, eventHandler) => {
   const { bucket: Bucket, region, accessKeyId, secretAccessKey, endpoint } = bucketSettings;
 
-  const s3 = new AWS.S3({ region, accessKeyId, secretAccessKey, endpoint, s3ForcePathStyle: true });
+  const s3 = new AWS.S3({ region, accessKeyId, secretAccessKey, endpoint });
 
   const handleEvent = event => {
     const parsedEvent = JSON.parse(event);

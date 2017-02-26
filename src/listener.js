@@ -13,7 +13,7 @@ class Listener {
     } : null;
     this.eventHandlers = {};
     this.replaying = false;
-    this.lastSequenceNumberFromBucket = -1;
+    this.lastSequenceNumber = -1;
 
     this.on = this.on.bind(this);
     this.listen = this.listen.bind(this);
@@ -48,10 +48,7 @@ class Listener {
   }
 
   _bucketEventHandler(sequenceNumber, event) {
-    return this._handleEvent({ sequenceNumber, event })
-      .then(() => {
-        this.lastSequenceNumberFromBucket = sequenceNumber;
-      });
+    return Promise.resolve(this._handleEvent({ sequenceNumber, event }));
   }
 
   _checkAuth(req) {
@@ -77,7 +74,7 @@ class Listener {
   };
 
   _handleEvent({ sequenceNumber, event }) {
-    if (sequenceNumber <= this.lastSequenceNumberFromBucket) {
+    if (sequenceNumber <= this.lastSequenceNumber) {
       process.env.NODE_ENV !== 'test' && console.log('Already handled event:', event);
       return 204;
     }
@@ -90,7 +87,10 @@ class Listener {
 
     process.env.NODE_ENV !== 'test' && console.log('Handling event:', event);
     return eventHandler(event.data).then(
-      () => 200,
+      () => {
+        this.lastSequenceNumber = sequenceNumber;
+        return 200;
+      },
       error => { throw { status: 500, error }; }
     );
   };

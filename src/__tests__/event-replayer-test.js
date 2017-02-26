@@ -37,7 +37,6 @@ describe('eventReplayer', () => {
       accessKeyId: 'ABC123',
       secretAccessKey: 'ABC123',
       endpoint: 'http://s3:1234',
-      s3ForcePathStyle: true,
     });
   });
 

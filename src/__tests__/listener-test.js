@@ -195,8 +195,10 @@ describe('listener', () => {
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
-      bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } });
-      expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+      return bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } })
+        .then(() => {
+          expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+        });
     });
 
     it('allows a bucket event to be replayed twice if it failed the first time', () => {
@@ -209,10 +211,48 @@ describe('listener', () => {
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
-      bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } }).catch(() => {});
-      bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } });
-      expect(eventHandler).to.have.been.calledWith({ some: 'data' });
-      expect(eventHandler.callCount).to.eql(2);
+      return Promise.resolve()
+        .then(() => bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } }).catch(() => {}))
+        .then(() => bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } }))
+        .then(() => {
+          expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+          expect(eventHandler.callCount).to.eql(2);
+        });
+    });
+
+    it('does not double-handle events when for some reason the same event is in the archive twice', () => {
+      const eventHandler = sinon.stub().returns(Promise.resolve());
+      listener.on('some-event-type', eventHandler);
+
+      eventReplayer.replayEvents.returns(Promise.resolve());
+      listener.listen();
+
+      const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
+      const event = { type: 'some-event-type', data: { some: 'data' } };
+      return Promise.resolve()
+        .then(() => bucketEventHandler(0, event))
+        .then(() => bucketEventHandler(0, event))
+        .then(() => {
+          expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+          expect(eventHandler.callCount).to.eql(1);
+        });
+    });
+
+    it('does not double-handle events when for some reason the same event comes from the stream twice', () => {
+      const eventHandler = sinon.stub().returns(Promise.resolve());
+      listener.on('some-event-type', eventHandler);
+
+      eventReplayer.replayEvents.returns(Promise.resolve());
+      const middleware = listener.listen();
+
+      const req = { header, body: requestBody(0, { type: 'some-event-type', data: { some: 'data' } }) };
+      return Promise.resolve()
+        .then(() => middleware(req, res))
+        .then(() => middleware(req, res))
+        .then(() => {
+          expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+          expect(eventHandler.callCount).to.eql(1);
+        });
     });
 
     it('does not double-handle events when the archive and the stream have some overlap', () => {
