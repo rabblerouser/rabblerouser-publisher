@@ -59,18 +59,7 @@ describe('publisher', () => {
 
   it('can put records to kinesis', () => {
     const publish = createPublisher(validSettings);
-    publish({ type: 'some-type', data: { some: 'data' } });
-
-    expect(putRecord).to.have.been.calledWith({
-      Data: '{"type":"some-type","data":{"some":"data"}}',
-      PartitionKey: 'some-type',
-      StreamName: 'my-stream',
-    });
-  });
-
-  it('only sends the type and data to kinesis', () => {
-    const publish = createPublisher(validSettings);
-    publish({ type: 'some-type', data: { some: 'data' }, extra: 'info' });
+    publish('some-type', { some: 'data' });
 
     expect(putRecord).to.have.been.calledWith({
       Data: '{"type":"some-type","data":{"some":"data"}}',
@@ -82,24 +71,24 @@ describe('publisher', () => {
   it('refuses to send events without a type', () => {
     const publish = createPublisher(validSettings);
 
-    expect(() => { publish({ data: {} }) }).to.throw(Error, /Invalid event type/);
+    expect(() => { publish(null, {}) }).to.throw(Error, /Invalid eventType/);
   });
 
   it('refuses to send events where type is not a string', () => {
     const publish = createPublisher(validSettings);
 
-    expect(() => { publish({ type: 5, data: {} }) }).to.throw(Error, /Invalid event type/);
+    expect(() => { publish(5, {}) }).to.throw(Error, /Invalid eventType/);
   });
 
   it('refuses to send events where type is blank', () => {
     const publish = createPublisher(validSettings);
 
-    expect(() => { publish({ type: '', data: {} }) }).to.throw(Error, /Invalid event type/);
+    expect(() => { publish('', {}) }).to.throw(Error, /Invalid eventType/);
   });
 
   it('refuses to send events without data', () => {
     const publish = createPublisher(validSettings);
 
-    expect(() => { publish({ type: 'some-type' }) }).to.throw(Error, /No event data defined./);
+    expect(() => { publish('some-type') }).to.throw(Error, /Missing eventData/);
   });
 });

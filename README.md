@@ -25,18 +25,11 @@ const streamClient = createClient({
   s3Endpoint: 'http://s3:1234',
 });
 
-// Each event must have a `type`. This is used for listeners to decide whether they are
-// interested in the event, and it will also be used by kinesis for sharding of events.
-// The event must also have `data`, which is what listeners will ultimately receive.
-const event = {
-  type: 'member-registered',
-  data: {
-    name: 'Jane Doe'
-  }
-};
-
-// Publish an event: (remember to handle errors!)
-streamClient.publish(event)
+// Publish an event: The first parameter is the `eventType`, which is used for listeners
+// to decide whether they are interested in the event, and it will also be used by
+// kinesis for sharding of events. The second parameter is the `eventData`, which is what
+// listeners will ultimately receive.
+streamClient.publish('member-registered', { name: 'Jane Doe' })
   .then(result => { ... })
   .catch(error => { ... });
 
@@ -80,11 +73,10 @@ want to bind any event handlers, or listen for events.
 
 Returns a `streamClient` object with the following methods:
 
-### `streamClient.publish(event)`
+### `streamClient.publish(eventType, eventData)`
 
-Publishes the given event to a kinesis stream. The event must have this structure (other fields are ignored):
-- `type` (*string*): The type of the event.
-- `data` (*object*): The event payload.
+- `eventType` (*string*): The type of the event.
+- `eventData` (*object*): The event payload. (Technically it can be anything JSON.stringify-able)
 
 ### `streamClient.on(type, handler)`
 

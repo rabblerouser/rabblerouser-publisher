@@ -1,21 +1,21 @@
 const AWS = require('aws-sdk');
 
-const validateEvent = event => {
-  if (typeof event.type !== 'string' || event.type.length === 0) {
-    throw new Error('Invalid event type')
+const validate = (eventType, eventData) => {
+  if (typeof eventType !== 'string' || eventType.length === 0) {
+    throw new Error('Invalid eventType')
   }
 
-  if (!event.data) {
-    throw new Error('No event data defined.')
+  if (!eventData) {
+    throw new Error('Missing eventData')
   }
 }
 
-const publish = (kinesis, streamName) => event => {
-  validateEvent(event);
+const publish = (kinesis, streamName) => (eventType, eventData) => {
+  validate(eventType, eventData);
 
   return kinesis.putRecord({
-    Data: JSON.stringify({ type: event.type, data: event.data }),
-    PartitionKey: event.type,
+    Data: JSON.stringify({ type: eventType, data: eventData }),
+    PartitionKey: eventType,
     StreamName: streamName,
   }).promise();
 };
