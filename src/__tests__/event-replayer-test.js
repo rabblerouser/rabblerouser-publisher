@@ -50,11 +50,11 @@ describe('eventReplayer', () => {
       IsTruncated: false,
       Contents: [{ Key: '2017-01-06_13' }],
     }));
-    const event1 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Kirk\\"}}","sequenceNumber":1}\n`;
-    const event2 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Picard\\"}}","sequenceNumber":2}\n`;
-    const event3 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Sisko\\"}}","sequenceNumber":3}\n`;
-    const event4 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Janeway\\"}}","sequenceNumber":4}\n`;
-    const event5 = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Archer\\"}}","sequenceNumber":5}\n`;
+    const event1 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Kirk\\"}}","sequenceNumber":1}\n`;
+    const event2 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Picard\\"}}","sequenceNumber":2}\n`;
+    const event3 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Sisko\\"}}","sequenceNumber":3}\n`;
+    const event4 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Janeway\\"}}","sequenceNumber":4}\n`;
+    const event5 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Archer\\"}}","sequenceNumber":5}\n`;
     const object1 = `${event1}${event2}`;
     const object2 = `${event3}`;
     const object3 = `${event4}${event5}`;
@@ -64,13 +64,51 @@ describe('eventReplayer', () => {
 
     const handleEvent = sandbox.stub().returns(Promise.resolve());
     return eventReplayer.replayEvents(bucketSettings, handleEvent).then(() => {
-      expect(handleEvent).to.have.been.calledWith(1, { type: 'reg', data: { name: 'Kirk' } });
-      expect(handleEvent).to.have.been.calledWith(2, { type: 'reg', data: { name: 'Picard' } });
-      expect(handleEvent).to.have.been.calledWith(3, { type: 'reg', data: { name: 'Sisko' } });
-      expect(handleEvent).to.have.been.calledWith(4, { type: 'reg', data: { name: 'Janeway' } });
-      expect(handleEvent).to.have.been.calledWith(5, { type: 'reg', data: { name: 'Archer' } });
+      expect(handleEvent).to.have.been.calledWith(1, { type: 'register', data: { name: 'Kirk' } });
+      expect(handleEvent).to.have.been.calledWith(2, { type: 'register', data: { name: 'Picard' } });
+      expect(handleEvent).to.have.been.calledWith(3, { type: 'register', data: { name: 'Sisko' } });
+      expect(handleEvent).to.have.been.calledWith(4, { type: 'register', data: { name: 'Janeway' } });
+      expect(handleEvent).to.have.been.calledWith(5, { type: 'register', data: { name: 'Archer' } });
       expect(handleEvent.callCount).to.eql(5);
     });
+  });
+
+  it('handle events in sequence', () => {
+    s3.listObjectsV2.withArgs({ Bucket: 'archive-bucket', ContinuationToken: undefined }).returns(awsResponse({
+      IsTruncated: true,
+      NextContinuationToken: 'nextPlz',
+      Contents: [{ Key: '2017-01-06_11' }, { Key: '2017-01-06_12' }],
+    }));
+    s3.listObjectsV2.withArgs({ Bucket: 'archive-bucket', ContinuationToken: 'nextPlz' }).returns(awsResponse({
+      IsTruncated: false,
+      Contents: [{ Key: '2017-01-06_13' }],
+    }));
+    const event1 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":1}\n`;
+    const event2 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":2}\n`;
+    const event3 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":3}\n`;
+    const event4 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":4}\n`;
+    const event5 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":5}\n`;
+    const object1 = `${event1}${event2}`;
+    const object2 = `${event3}`;
+    const object3 = `${event4}${event5}`;
+    s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_11' }).returns(awsResponse({ Body: object1 }));
+    s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_12' }).returns(awsResponse({ Body: object2 }));
+    s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_13' }).returns(awsResponse({ Body: object3 }));
+
+    const spy = sandbox.spy();
+    const eventHandler = (sequenceNumber) => (
+      // This function acts as a slow event handler, which should be waited on by the replayer loop
+      new Promise(resolve => {
+        // This is just to track how many events have been processed
+        spy();
+        setTimeout(() => {
+          // Then after waiting a bit, we make sure that no subsequent events have been handled in the meantime
+          expect(spy.callCount).to.eql(sequenceNumber);
+          resolve();
+        }, 0);
+      })
+    );
+    return eventReplayer.replayEvents(bucketSettings, eventHandler);
   });
 
   it('retries events that fail temporarily', () => {

@@ -7,7 +7,7 @@ const replayEvents = (bucketSettings, eventHandler) => {
 
   const handleEvent = event => {
     const parsedEvent = JSON.parse(event);
-    const eventData = JSON.parse(parsedEvent.data)
+    const eventData = JSON.parse(parsedEvent.data);
     return eventHandler(parsedEvent.sequenceNumber, eventData)
       .catch(error => {
         process.env.NODE_ENV !== 'test' && console.log('Handling event failed:', error);
@@ -15,10 +15,17 @@ const replayEvents = (bucketSettings, eventHandler) => {
       });
   };
 
+  let promise = Promise.resolve();
   const fetchAndReplayObject = ({ Key }) => (
     s3.getObject({ Bucket, Key }).promise().then(object => {
       const events = object.Body.toString().trim().split('\n');
-      return Promise.all(events.map(handleEvent));
+
+      events.forEach(event => {
+        // This strange promise looping ensures that the events are processed in sequence, not in parallel.
+        // It makes sure that the current event isn't handled until after the previous one, and sets itself as current.
+        promise = promise.then(() => handleEvent(event));
+      });
+      return promise;
     })
   );
 
