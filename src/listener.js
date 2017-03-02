@@ -75,17 +75,17 @@ class Listener {
 
   _handleEvent({ sequenceNumber, event }) {
     if (sequenceNumber <= this.lastSequenceNumber) {
-      process.env.NODE_ENV !== 'test' && console.log('Already handled event:', event);
+      process.env.NODE_ENV !== 'test' && console.log(`Already handled event ${sequenceNumber}`);
       return 204;
     }
 
     const eventHandler = this.eventHandlers[event.type];
     if (!eventHandler) {
-      process.env.NODE_ENV !== 'test' && console.log('Ignoring event:', event);
+      process.env.NODE_ENV !== 'test' && console.log(`Ignoring event ${sequenceNumber}`);
       return 204;
     }
 
-    process.env.NODE_ENV !== 'test' && console.log('Handling event:', event);
+    process.env.NODE_ENV !== 'test' && console.log(`Handling event ${sequenceNumber}:`, event);
     return eventHandler(event.data).then(
       () => {
         this.lastSequenceNumber = sequenceNumber;
