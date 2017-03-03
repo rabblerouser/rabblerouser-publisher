@@ -1,11 +1,15 @@
 {
-  "name": "rabblerouser-stream-client",
+  "name": "@rabblerouser/stream-client",
   "version": "0.8.2",
   "description": "Rabble Rouser's kinesis stream client. It publishes and listens for events.",
   "main": "src/index.js",
   "scripts": {
     "demo": "node demo/index.js",
     "test": "NODE_ENV=test mocha -r src/__tests__/testGlobals.js --recursive src/__tests__"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rabblerouser/stream-client.git"
   },
   "keywords": [
     "streams",
@@ -14,6 +18,10 @@
     "kinesis"
   ],
   "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/rabblerouser/local-kinesis-lambda-runner/issues"
+  },
+  "homepage": "https://github.com/rabblerouser/local-kinesis-lambda-runner#readme",
   "author": {
     "name": "The Rabble Rouser Team",
     "email": "rabblerouserproject@gmail.com",

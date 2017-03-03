@@ -1,17 +1,17 @@
-# rabblerouser-stream-client
+# Rabble Rouser Stream Client
 
 Rabble Rouser's kinesis stream client. It publishes and listens for events.
 
 ## Installation
 
 ```sh
-npm install --save rabblerouser-stream-client
+npm install --save @rabblerouser/stream-client
 ```
 
 ## Usage
 
 ```js
-const createClient = require('rabblerouser-stream-client');
+const createClient = require('@rabblerouser/stream-client');
 
 // This is the complete config, not everything is required (see API reference below)
 const streamClient = createClient({
@@ -51,7 +51,7 @@ myExpressJsApp.post('/events', streamClient.listen());
 This library does not directly pull events from kinesis, because Amazon recommend you use a dedicated thread for that,
 which is not really possible with Node.js. This library just helps you create a listener for events that are sent to
 your application via HTTP POST. If you want the listener to be useful, you need something else that polls the kinesis
-stream, and sends you those HTTP requests. That is what [rabblerouser/event-forwarder](https://github.com/rabblerouser/event-forwarder)
+stream, and sends you those HTTP requests. That is what [event-forwarder](https://github.com/rabblerouser/event-forwarder)
 does. See its readme for more details.
 
 ## API Reference
@@ -85,7 +85,7 @@ Registers a handler for a particular event type. Note that events won't start co
 - `handler` (*function(`data`)*): The function that will receive the events.
   - `data` (*object*): The original payload, without the type or any other metadata.
   - *Returns*: It must return a Promise, whose resolution indicates whether the event was handled successfully. Failed
-  events will be retried again until they succeed. *(This may change in the future, see [here](https://github.com/rabblerouser/rabblerouser-core/issues/132)
+  events will be retried again until they succeed. *(This may change in the future, see [here](https://github.com/rabblerouser/core/issues/132)
   for more discussion of event failures, and how we might address the problem of invalid events that can never succeed, which would clog the stream)*
 
 ### `streamClient.listen()`
@@ -109,3 +109,11 @@ following structure:
 ```
 
 The `data` field, when decoded and parsed, must contain an event object with `type` and `data` attributes as described above.
+
+## Publishing this library
+
+Scoped packages (which this is) are private by default on npm, which is a paid feature. To publish publicly, use this command:
+
+```sh
+npm publish --access=public
+```
