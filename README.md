@@ -1,5 +1,7 @@
 # Rabble Rouser Stream Client
 
+[![Build Status](https://travis-ci.org/rabblerouser/stream-client.svg?branch=master)](https://travis-ci.org/rabblerouser/stream-client)
+
 Rabble Rouser's kinesis stream client. It publishes and listens for events.
 
 ## Installation
