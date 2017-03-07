@@ -20,10 +20,8 @@ describe('listener', () => {
     sandbox.restore();
   });
 
-  const requestBody = (sequenceNumber, event) => ({
-    sequenceNumber,
-    data: new Buffer(JSON.stringify(event)).toString('base64'),
-  });
+  const encodeEvent = event => new Buffer(JSON.stringify(event)).toString('base64')
+  const requestBody = (sequenceNumber, event) => ({ sequenceNumber, data: encodeEvent(event) });
 
   describe('creation', () => {
       it('allows no auth token to be configured, but blows up if you then try to use the listener', () => {
@@ -66,14 +64,14 @@ describe('listener', () => {
     });
 
     it('rejects the event if the auth header is missing', () => {
-      const req = { header: () => undefined, body: { type: 'some-event-type', data: { some: 'data' } } };
+      const req = { header: () => undefined, body: requestBody("0", { type: 'some-event-type', data: {} }) };
       return listener.listen()(req, res).then(() => {
         expect(res.status).to.have.been.calledWith(401);
       });
     });
 
     it('rejects the event if the auth header is wrong', () => {
-      const req = { header: () => 'wrong', body: { type: 'some-event-type', data: { some: 'data' } } };
+      const req = { header: () => 'wrong', body: requestBody("0", { type: 'some-event-type', data: {} }) };
       return listener.listen()(req, res).then(() => {
         expect(res.status).to.have.been.calledWith(401);
       });
@@ -94,22 +92,31 @@ describe('listener', () => {
     });
 
     it('rejects the event if the request body data is not a base64-encoded JSON string', () => {
-      const req = { header, body: { data: "bad data" } };
+      const req = { header, body: { sequenceNumber: "0", data: "bad data" } };
       return listener.listen()(req, res).then(() => {
         expect(res.status).to.have.been.calledWith(400);
       });
-    });it('succeeds if there is no handler that matches the given event', () => {
-      const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
+    });
+
+    it('rejects the event if the request body has no sequenceNumber', () => {
+      const req = { header, body: requestBody("", { type: 'some-event-type', data: { some: 'data' } }) };
+      return listener.listen()(req, res).then(() => {
+        expect(res.status).to.have.been.calledWith(400);
+      });
+    });
+
+    it('succeeds and does nothing if there is no handler that matches the given event', () => {
+      const req = { header, body: requestBody("0", { type: 'ignore-me', data: {} }) };
       return listener.listen()(req, res).then(() => {
         expect(res.sendStatus).to.have.been.calledWith(204);
       });
     });
 
-    it('succeeds and sends the event data when there is a matching handler', () => {
+    it('succeeds and handles the event data when there is a matching handler', () => {
       const eventHandler = sinon.stub().returns(Promise.resolve());
       listener.on('some-event-type', eventHandler);
 
-      const req = { header, body: requestBody(0, { type: 'some-event-type', data: { some: 'data' } }) };
+      const req = { header, body: requestBody("0", { type: 'some-event-type', data: { some: 'data' } }) };
       return listener.listen()(req, res).then(() => {
         expect(eventHandler).to.have.been.calledWith({ some: 'data' });
         expect(res.sendStatus).to.have.been.calledWith(200);
@@ -120,7 +127,7 @@ describe('listener', () => {
       const eventHandler = sinon.stub().returns(Promise.reject('Error!'));
       listener.on('some-event-type', eventHandler);
 
-      const req = { header, body: requestBody(0, { type: 'some-event-type', data: { some: 'data' } }) }
+      const req = { header, body: requestBody("0", { type: 'some-event-type', data: { some: 'data' } }) }
       return listener.listen()(req, res).then(() => {
         expect(eventHandler).to.have.been.calledWith({ some: 'data' });
         expect(res.status).to.have.been.calledWith(500);
@@ -157,7 +164,7 @@ describe('listener', () => {
 
     it('rejects the event if currently replaying history from the bucket', () => {
       eventReplayer.replayEvents.returns(new Promise(() => {}));
-      const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
+      const req = { header, body: requestBody("0", { type: 'ignore-me', data: {} }) };
       return listener.listen()(req, res).then(() => {
         expect(res.status).to.have.been.calledWith(503);
       });
@@ -165,7 +172,7 @@ describe('listener', () => {
 
     it('will never accept events if the replaying fails', () => {
       eventReplayer.replayEvents.returns(Promise.reject());
-      const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
+      const req = { header, body: requestBody("0", { type: 'ignore-me', data: {} }) };
 
       const middleware = listener.listen();
       return Promise.resolve().then(() => (
@@ -177,7 +184,7 @@ describe('listener', () => {
 
     it('accepts stream events after the replaying finishes', () => {
       eventReplayer.replayEvents.returns(Promise.resolve());
-      const req = { header, body: requestBody(0, { type: 'ignore-me', data: {} }) };
+      const req = { header, body: requestBody("0", { type: 'ignore-me', data: {} }) };
 
       const middleware = listener.listen();
       return Promise.resolve().then(() => (
@@ -195,13 +202,13 @@ describe('listener', () => {
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
-      return bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } })
+      return bucketEventHandler("0", encodeEvent({ type: 'some-event-type', data: { some: 'data' } }))
         .then(() => {
           expect(eventHandler).to.have.been.calledWith({ some: 'data' });
         });
     });
 
-    it('allows a bucket event to be replayed twice if it failed the first time', () => {
+    it('allows a bucket event to be replayed if it failed the first time', () => {
       const eventHandler = sinon.stub()
       eventHandler.onCall(0).returns(Promise.reject());
       eventHandler.onCall(1).returns(Promise.resolve());
@@ -211,9 +218,10 @@ describe('listener', () => {
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
+      const event = encodeEvent({ type: 'some-event-type', data: { some: 'data' } });
       return Promise.resolve()
-        .then(() => bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } }).catch(() => {}))
-        .then(() => bucketEventHandler(0, { type: 'some-event-type', data: { some: 'data' } }))
+        .then(() => bucketEventHandler("0", event).catch(() => {}))
+        .then(() => bucketEventHandler("0", event))
         .then(() => {
           expect(eventHandler).to.have.been.calledWith({ some: 'data' });
           expect(eventHandler.callCount).to.eql(2);
@@ -228,12 +236,33 @@ describe('listener', () => {
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
-      const event = { type: 'some-event-type', data: { some: 'data' } };
+      const event = encodeEvent({ type: 'some-event-type', data: { some: 'data' } });
       return Promise.resolve()
-        .then(() => bucketEventHandler(0, event))
-        .then(() => bucketEventHandler(0, event))
+        .then(() => bucketEventHandler("0", event))
+        .then(() => bucketEventHandler("0", event))
         .then(() => {
           expect(eventHandler).to.have.been.calledWith({ some: 'data' });
+          expect(eventHandler.callCount).to.eql(1);
+        });
+    });
+
+    it("is not fooled by sequenceNumber strings of different lengths", () => {
+      const eventHandler = sinon.stub().returns(Promise.resolve());
+      listener.on('some-event-type', eventHandler);
+
+      eventReplayer.replayEvents.returns(Promise.resolve());
+      listener.listen();
+
+      const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
+      const goodEvent = encodeEvent({ type: 'some-event-type', data: { some: 'handled data' } });
+      const outOfOrderEvent = encodeEvent({ type: 'some-event-type', data: { some: 'ignored data' } });
+      return Promise.resolve()
+        // Alphabetical comparison of these sequenceNumber strings will result in ("10" < "9" === true)
+        .then(() => bucketEventHandler("10", goodEvent))
+        .then(() => bucketEventHandler("9", outOfOrderEvent))
+        .then(() => {
+          expect(eventHandler).to.have.been.calledWith({ some: 'handled data' });
+          expect(eventHandler).not.to.have.been.calledWith({ some: 'ignored data' });
           expect(eventHandler.callCount).to.eql(1);
         });
     });
@@ -245,7 +274,7 @@ describe('listener', () => {
       eventReplayer.replayEvents.returns(Promise.resolve());
       const middleware = listener.listen();
 
-      const req = { header, body: requestBody(0, { type: 'some-event-type', data: { some: 'data' } }) };
+      const req = { header, body: requestBody("0", { type: 'some-event-type', data: { some: 'data' } }) };
       return Promise.resolve()
         .then(() => middleware(req, res))
         .then(() => middleware(req, res))
@@ -269,12 +298,12 @@ describe('listener', () => {
       // Send events 0, 1, and 2 from the bucket first
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
       return Promise.all([0, 1, 2].map(sequenceNumber => (
-        bucketEventHandler(sequenceNumber, events[sequenceNumber])
+        bucketEventHandler(sequenceNumber.toString(), encodeEvent(events[sequenceNumber]))
       ))).then(() => (
 
         // Now send events 1, 2, and 3 from the stream
         Promise.all([1, 2, 3].map(sequenceNumber => {
-          const req = { header, body: requestBody(sequenceNumber, events[sequenceNumber]) };
+          const req = { header, body: requestBody(sequenceNumber.toString(), events[sequenceNumber]) };
           return middleware(req, res);
         }))
       )).then(() => {

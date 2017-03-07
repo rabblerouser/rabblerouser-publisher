@@ -5,25 +5,25 @@ const replayEvents = (bucketSettings, eventHandler) => {
 
   const s3 = new AWS.S3({ region, accessKeyId, secretAccessKey, endpoint });
 
-  const handleEvent = event => {
-    const parsedEvent = JSON.parse(event);
-    const eventData = JSON.parse(parsedEvent.data);
-    return eventHandler(parsedEvent.sequenceNumber, eventData)
+  const processObjectLine = line => {
+    const event = JSON.parse(line);
+    return eventHandler(event.sequenceNumber, event.data)
       .catch(error => {
-        process.env.NODE_ENV !== 'test' && console.log('Handling event failed:', error);
-        return handleEvent(event);
+        process.env.NODE_ENV !== 'test' && console.error('Handling event failed:', error);
+        return processObjectLine(line);
       });
   };
 
   let promise = Promise.resolve();
   const fetchAndReplayObject = ({ Key }) => (
     s3.getObject({ Bucket, Key }).promise().then(object => {
-      const events = object.Body.toString().trim().split('\n');
+      process.env.NODE_ENV !== 'test' && console.log(`Fetched object: ${Key}`);
+      const objectLines = object.Body.toString().trim().split('\n');
 
-      events.forEach(event => {
+      objectLines.forEach(line => {
         // This strange promise looping ensures that the events are processed in sequence, not in parallel.
         // It makes sure that the current event isn't handled until after the previous one, and sets itself as current.
-        promise = promise.then(() => handleEvent(event));
+        promise = promise.then(() => processObjectLine(line));
       });
       return promise;
     })
@@ -32,18 +32,21 @@ const replayEvents = (bucketSettings, eventHandler) => {
   const fetchAndReplayObjects = objects => Promise.all(objects.Contents.map(fetchAndReplayObject));
 
   const listAndFetchAndReplayObjects = ContinuationToken => {
-    return s3.listObjectsV2({ Bucket, ContinuationToken }).promise().then(objects => (
-      fetchAndReplayObjects(objects).then(() => {
+    return s3.listObjectsV2({ Bucket, ContinuationToken }).promise().then(objects => {
+      process.env.NODE_ENV !== 'test' &&
+        console.log(`Got list of bucket objects: [${objects.Contents.map(object => object.Key)}]`);
+      return fetchAndReplayObjects(objects).then(() => {
         if (objects.IsTruncated) {
           // There are more objects still in the bucket, recurse to the next lot
           return listAndFetchAndReplayObjects(objects.NextContinuationToken);
         }
         // We've exhausted the bucket, end the chain
         return Promise.resolve();
-      })
-    ));
+      });
+    });
   };
 
+  process.env.NODE_ENV !== 'test' && console.log(`Replaying events from bucket: ${Bucket}`);
   return listAndFetchAndReplayObjects();
 };
 

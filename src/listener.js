@@ -21,7 +21,7 @@ class Listener {
     this._rejectNewEventsWhileReplaying = this._rejectNewEventsWhileReplaying.bind(this);
     this._bucketEventHandler = this._bucketEventHandler.bind(this);
     this._handleEvent = this._handleEvent.bind(this);
-    this._parseEvent = this._parseEvent.bind(this);
+    this._parseRequest = this._parseRequest.bind(this);
   }
 
   on(type, handler) {
@@ -33,22 +33,24 @@ class Listener {
     if (this.archiveBucketSettings) {
       this.replaying = true;
       eventReplayer.replayEvents(this.archiveBucketSettings, this._bucketEventHandler).then(() => {
+        // This happens after *all* events from the bucket have been replayed
         this.replaying = false;
-      }).catch(() => {}); // Replay never finishes if it fails
+      }).catch(process.env.NODE_ENV === 'test' ? () => {} : console.error); // Replay never finishes if it fails
     }
     return (req, res) => {
       return Promise.resolve(req)
         .then(this._checkAuth)
         .then(this._rejectNewEventsWhileReplaying)
-        .then(this._parseEvent)
+        .then(this._parseRequest)
         .then(this._handleEvent)
         .then(status => res.sendStatus(status))
         .catch(({ status, error }) => res.status(status).json({ error }));
     };
   }
 
-  _bucketEventHandler(sequenceNumber, event) {
-    return Promise.resolve(this._handleEvent({ sequenceNumber, event }));
+  _bucketEventHandler(sequenceNumber, data) {
+    const event = parseKinesisEvent({ sequenceNumber, data });
+    return Promise.resolve(this._handleEvent(event));
   }
 
   _checkAuth(req) {
@@ -65,8 +67,8 @@ class Listener {
     return req;
   }
 
-  _parseEvent(req) {
-    const event = parseRequestBody(req.body);
+  _parseRequest(req) {
+    const event = parseKinesisEvent(req.body);
     if (!event) {
       throw { status: 400, error: 'Missing or invalid request body' };
     }
@@ -106,14 +108,14 @@ const validateEventHandler = (type, handler) => {
   }
 };
 
-const parseRequestBody = body => {
-  if (!body) return null;
-  if (!body.data) return null;
-  if (!body.sequenceNumber && body.sequenceNumber !== 0) return null;
+const parseKinesisEvent = kinesisEvent => {
+  if (!kinesisEvent) return null;
+  if (!kinesisEvent.data) return null;
+  if (!kinesisEvent.sequenceNumber) return null;
   try {
     return {
-      sequenceNumber: body.sequenceNumber,
-      event: JSON.parse(new Buffer(body.data, 'base64')),
+      sequenceNumber: parseInt(kinesisEvent.sequenceNumber),
+      event: JSON.parse(new Buffer(kinesisEvent.data, 'base64')),
     };
   } catch(e) {
     return null;

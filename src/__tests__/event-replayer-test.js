@@ -50,11 +50,11 @@ describe('eventReplayer', () => {
       IsTruncated: false,
       Contents: [{ Key: '2017-01-06_13' }],
     }));
-    const event1 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Kirk\\"}}","sequenceNumber":1}\n`;
-    const event2 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Picard\\"}}","sequenceNumber":2}\n`;
-    const event3 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Sisko\\"}}","sequenceNumber":3}\n`;
-    const event4 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Janeway\\"}}","sequenceNumber":4}\n`;
-    const event5 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{\\"name\\":\\"Archer\\"}}","sequenceNumber":5}\n`;
+    const event1 = '{"sequenceNumber":"1","data":"base64Data1"}\n';
+    const event2 = '{"sequenceNumber":"2","data":"base64Data2"}\n';
+    const event3 = '{"sequenceNumber":"3","data":"base64Data3"}\n';
+    const event4 = '{"sequenceNumber":"4","data":"base64Data4"}\n';
+    const event5 = '{"sequenceNumber":"5","data":"base64Data5"}\n';
     const object1 = `${event1}${event2}`;
     const object2 = `${event3}`;
     const object3 = `${event4}${event5}`;
@@ -64,11 +64,11 @@ describe('eventReplayer', () => {
 
     const handleEvent = sandbox.stub().returns(Promise.resolve());
     return eventReplayer.replayEvents(bucketSettings, handleEvent).then(() => {
-      expect(handleEvent).to.have.been.calledWith(1, { type: 'register', data: { name: 'Kirk' } });
-      expect(handleEvent).to.have.been.calledWith(2, { type: 'register', data: { name: 'Picard' } });
-      expect(handleEvent).to.have.been.calledWith(3, { type: 'register', data: { name: 'Sisko' } });
-      expect(handleEvent).to.have.been.calledWith(4, { type: 'register', data: { name: 'Janeway' } });
-      expect(handleEvent).to.have.been.calledWith(5, { type: 'register', data: { name: 'Archer' } });
+      expect(handleEvent).to.have.been.calledWith('1', 'base64Data1');
+      expect(handleEvent).to.have.been.calledWith('2', 'base64Data2');
+      expect(handleEvent).to.have.been.calledWith('3', 'base64Data3');
+      expect(handleEvent).to.have.been.calledWith('4', 'base64Data4');
+      expect(handleEvent).to.have.been.calledWith('5', 'base64Data5');
       expect(handleEvent.callCount).to.eql(5);
     });
   });
@@ -83,11 +83,11 @@ describe('eventReplayer', () => {
       IsTruncated: false,
       Contents: [{ Key: '2017-01-06_13' }],
     }));
-    const event1 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":1}\n`;
-    const event2 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":2}\n`;
-    const event3 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":3}\n`;
-    const event4 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":4}\n`;
-    const event5 = `{"data":"{\\"type\\":\\"register\\",\\"data\\":{}}","sequenceNumber":5}\n`;
+    const event1 = '{"sequenceNumber":"1","data":"based64Data1"}\n';
+    const event2 = '{"sequenceNumber":"2","data":"based64Data2"}\n';
+    const event3 = '{"sequenceNumber":"3","data":"based64Data3"}\n';
+    const event4 = '{"sequenceNumber":"4","data":"based64Data4"}\n';
+    const event5 = '{"sequenceNumber":"5","data":"based64Data5"}\n';
     const object1 = `${event1}${event2}`;
     const object2 = `${event3}`;
     const object3 = `${event4}${event5}`;
@@ -103,7 +103,7 @@ describe('eventReplayer', () => {
         spy();
         setTimeout(() => {
           // Then after waiting a bit, we make sure that no subsequent events have been handled in the meantime
-          expect(spy.callCount).to.eql(sequenceNumber);
+          expect(spy.callCount).to.eql(parseInt(sequenceNumber));
           resolve();
         }, 0);
       })
@@ -116,15 +116,15 @@ describe('eventReplayer', () => {
       IsTruncated: false,
       Contents: [{ Key: '2017-01-06_11' }],
     }));
-    const event = `{"data":"{\\"type\\":\\"reg\\",\\"data\\":{\\"name\\":\\"Kirk\\"}}","sequenceNumber":1}\n`;
+    const event = '{"sequenceNumber":"1","data":"base64Data"}\n';
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_11' }).returns(awsResponse({ Body: event }));
 
     const handleEvent = sandbox.stub();
-    handleEvent.onCall(0).returns(Promise.reject());
-    handleEvent.onCall(1).returns(Promise.reject());
+    handleEvent.onCall(0).returns(Promise.reject('Oops!'));
+    handleEvent.onCall(1).returns(Promise.reject('Oops!'));
     handleEvent.onCall(2).returns(Promise.resolve());
     return eventReplayer.replayEvents(bucketSettings, handleEvent).then(() => {
-      expect(handleEvent).to.have.been.calledWith(1, { type: 'reg', data: { name: 'Kirk' } });
+      expect(handleEvent).to.have.been.calledWith('1', 'base64Data');
       expect(handleEvent.callCount).to.eql(3);
     });
   });
