@@ -208,6 +208,21 @@ describe('listener', () => {
         });
     });
 
+    it('rejects invalid archive events', () => {
+      const eventHandler = sinon.stub().returns(Promise.resolve());
+      listener.on('some-event-type', eventHandler);
+
+      eventReplayer.replayEvents.returns(Promise.resolve());
+      listener.listen();
+
+      const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
+      return bucketEventHandler("0", { type: 'some-event-type', data: { some: 'data' } })
+        .then(
+          () => { throw new Error('Should not have got here.'); },
+          err => { expect(err).to.match(/Failed to parse/); }
+        );
+    });
+
     it('allows a bucket event to be replayed if it failed the first time', () => {
       const eventHandler = sinon.stub()
       eventHandler.onCall(0).returns(Promise.reject());

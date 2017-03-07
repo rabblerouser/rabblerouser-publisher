@@ -52,6 +52,9 @@ class Listener {
 
   _bucketEventHandler(sequenceNumber, data) {
     const event = parseKinesisEvent({ sequenceNumber, data });
+    if (!event) {
+      return Promise.reject('Failed to parse kinesis data from bucket with sequence number:', sequenceNumber);
+    }
     return Promise.resolve(this._handleEvent(event));
   }
 
@@ -120,6 +123,7 @@ const parseKinesisEvent = kinesisEvent => {
       event: JSON.parse(new Buffer(kinesisEvent.data, 'base64')),
     };
   } catch(e) {
+    process.env.NODE_ENV !== 'test' && console.log(`Failed to parse kinesis data: ${JSON.stringify(kinesisEvent.data)}, ${e}`);
     return null;
   }
 };
