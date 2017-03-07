@@ -62,7 +62,7 @@ describe('eventReplayer', () => {
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_12' }).returns(awsResponse({ Body: object2 }));
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_13' }).returns(awsResponse({ Body: object3 }));
 
-    const handleEvent = sandbox.stub().returns(Promise.resolve());
+    const handleEvent = sandbox.stub().resolves();
     return eventReplayer.replayEvents(bucketSettings, handleEvent).then(() => {
       expect(handleEvent).to.have.been.calledWith('1', 'base64Data1');
       expect(handleEvent).to.have.been.calledWith('2', 'base64Data2');

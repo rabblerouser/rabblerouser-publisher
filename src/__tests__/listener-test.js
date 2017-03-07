@@ -113,7 +113,7 @@ describe('listener', () => {
     });
 
     it('succeeds and handles the event data when there is a matching handler', () => {
-      const eventHandler = sinon.stub().returns(Promise.resolve());
+      const eventHandler = sinon.stub().resolves();
       listener.on('some-event-type', eventHandler);
 
       const req = { header, body: requestBody("0", { type: 'some-event-type', data: { some: 'data' } }) };
@@ -124,14 +124,13 @@ describe('listener', () => {
     });
 
     it('fails if the event handler fails', () => {
-      const eventHandler = sinon.stub().returns(Promise.reject('Error!'));
+      const eventHandler = sinon.stub().rejects('Oops!');
       listener.on('some-event-type', eventHandler);
 
       const req = { header, body: requestBody("0", { type: 'some-event-type', data: { some: 'data' } }) }
       return listener.listen()(req, res).then(() => {
         expect(eventHandler).to.have.been.calledWith({ some: 'data' });
         expect(res.status).to.have.been.calledWith(500);
-        expect(res.status().json).to.have.been.calledWith({ error: 'Error!' });
       });
     });
   });
@@ -151,7 +150,7 @@ describe('listener', () => {
     });
 
     it('passes the relevant config to the event replayer', () => {
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       listener.listen();
       expect(eventReplayer.replayEvents.args[0][0]).to.eql({
         bucket: 'archive-bucket',
@@ -171,7 +170,7 @@ describe('listener', () => {
     });
 
     it('will never accept events if the replaying fails', () => {
-      eventReplayer.replayEvents.returns(Promise.reject());
+      eventReplayer.replayEvents.rejects();
       const req = { header, body: requestBody("0", { type: 'ignore-me', data: {} }) };
 
       const middleware = listener.listen();
@@ -183,7 +182,7 @@ describe('listener', () => {
     });
 
     it('accepts stream events after the replaying finishes', () => {
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       const req = { header, body: requestBody("0", { type: 'ignore-me', data: {} }) };
 
       const middleware = listener.listen();
@@ -195,10 +194,10 @@ describe('listener', () => {
     });
 
     it('handles events coming out from the event replayer', () => {
-      const eventHandler = sinon.stub().returns(Promise.resolve());
+      const eventHandler = sinon.stub().resolves();
       listener.on('some-event-type', eventHandler);
 
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
@@ -209,10 +208,10 @@ describe('listener', () => {
     });
 
     it('rejects invalid archive events', () => {
-      const eventHandler = sinon.stub().returns(Promise.resolve());
+      const eventHandler = sinon.stub().resolves();
       listener.on('some-event-type', eventHandler);
 
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
@@ -225,11 +224,11 @@ describe('listener', () => {
 
     it('allows a bucket event to be replayed if it failed the first time', () => {
       const eventHandler = sinon.stub()
-      eventHandler.onCall(0).returns(Promise.reject());
-      eventHandler.onCall(1).returns(Promise.resolve());
+      eventHandler.onCall(0).rejects();
+      eventHandler.onCall(1).resolves();
       listener.on('some-event-type', eventHandler);
 
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
@@ -244,10 +243,10 @@ describe('listener', () => {
     });
 
     it('does not double-handle events when for some reason the same event is in the archive twice', () => {
-      const eventHandler = sinon.stub().returns(Promise.resolve());
+      const eventHandler = sinon.stub().resolves();
       listener.on('some-event-type', eventHandler);
 
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
@@ -262,10 +261,10 @@ describe('listener', () => {
     });
 
     it("is not fooled by sequenceNumber strings of different lengths", () => {
-      const eventHandler = sinon.stub().returns(Promise.resolve());
+      const eventHandler = sinon.stub().resolves();
       listener.on('some-event-type', eventHandler);
 
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
@@ -283,10 +282,10 @@ describe('listener', () => {
     });
 
     it("is not fooled by numbers larger than Number.MAX_SAFE_INTEGER", () => {
-      const eventHandler = sinon.stub().returns(Promise.resolve());
+      const eventHandler = sinon.stub().resolves();
       listener.on('some-event-type', eventHandler);
 
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       listener.listen();
 
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
@@ -304,10 +303,10 @@ describe('listener', () => {
     });
 
     it('does not double-handle events when for some reason the same event comes from the stream twice', () => {
-      const eventHandler = sinon.stub().returns(Promise.resolve());
+      const eventHandler = sinon.stub().resolves();
       listener.on('some-event-type', eventHandler);
 
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       const middleware = listener.listen();
 
       const req = { header, body: requestBody("0", { type: 'some-event-type', data: { some: 'data' } }) };
@@ -321,10 +320,10 @@ describe('listener', () => {
     });
 
     it('does not double-handle events when the archive and the stream have some overlap', () => {
-      const eventHandler = sinon.stub().returns(Promise.resolve());
+      const eventHandler = sinon.stub().resolves();
       listener.on('some-event-type', eventHandler);
 
-      eventReplayer.replayEvents.returns(Promise.resolve());
+      eventReplayer.replayEvents.resolves();
       const middleware = listener.listen();
 
       const events = [0, 1, 2, 3].map(i => (
