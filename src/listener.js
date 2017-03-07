@@ -1,4 +1,6 @@
 'use strict';
+const Big = require('big.js');
+Big.E_POS = 100; // Don't show numbers less than 100 digits in scientific notation
 const eventReplayer = require('./event-replayer');
 
 class Listener {
@@ -13,7 +15,7 @@ class Listener {
     } : null;
     this.eventHandlers = {};
     this.replaying = false;
-    this.lastSequenceNumber = -1;
+    this.lastSequenceNumber = Big(-1);
 
     this.on = this.on.bind(this);
     this.listen = this.listen.bind(this);
@@ -76,7 +78,7 @@ class Listener {
   };
 
   _handleEvent({ sequenceNumber, event }) {
-    if (sequenceNumber <= this.lastSequenceNumber) {
+    if (sequenceNumber.lte(this.lastSequenceNumber)) {
       process.env.NODE_ENV !== 'test' && console.log(`Already handled event ${sequenceNumber.toString()}`);
       return 204;
     }
@@ -114,7 +116,7 @@ const parseKinesisEvent = kinesisEvent => {
   if (!kinesisEvent.sequenceNumber) return null;
   try {
     return {
-      sequenceNumber: parseInt(kinesisEvent.sequenceNumber),
+      sequenceNumber: Big(kinesisEvent.sequenceNumber),
       event: JSON.parse(new Buffer(kinesisEvent.data, 'base64')),
     };
   } catch(e) {

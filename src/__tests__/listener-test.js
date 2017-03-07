@@ -267,6 +267,27 @@ describe('listener', () => {
         });
     });
 
+    it("is not fooled by numbers larger than Number.MAX_SAFE_INTEGER", () => {
+      const eventHandler = sinon.stub().returns(Promise.resolve());
+      listener.on('some-event-type', eventHandler);
+
+      eventReplayer.replayEvents.returns(Promise.resolve());
+      listener.listen();
+
+      const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
+      const firstEvent = encodeEvent({ type: 'some-event-type', data: { some: 'first data' } });
+      const secondEvent = encodeEvent({ type: 'some-event-type', data: { some: 'second data' } });
+      return Promise.resolve()
+        // parseInt will truncate these two numbers to the same value, which would cause the second one to be ignored
+        .then(() => bucketEventHandler("49571033776140984913098869278824287563719901118904401922", firstEvent))
+        .then(() => bucketEventHandler("49571033776140984913098869278824287563719901118904401923", secondEvent))
+        .then(() => {
+          expect(eventHandler).to.have.been.calledWith({ some: 'first data' });
+          expect(eventHandler).to.have.been.calledWith({ some: 'second data' });
+          expect(eventHandler.callCount).to.eql(2);
+        });
+    });
+
     it('does not double-handle events when for some reason the same event comes from the stream twice', () => {
       const eventHandler = sinon.stub().returns(Promise.resolve());
       listener.on('some-event-type', eventHandler);
