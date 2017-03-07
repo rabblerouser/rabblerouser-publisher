@@ -5,3 +5,4 @@ chai.should();
 global.expect = chai.expect;
 global.sinon = require('sinon');
 global.chai = chai;
+require('sinon-as-promised');

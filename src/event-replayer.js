@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 
-const replayEvents = (bucketSettings, eventHandler) => {
+const replayEvents = (bucketSettings, eventHandler, retryDelay = 500) => {
   const { bucket: Bucket, region, accessKeyId, secretAccessKey, endpoint } = bucketSettings;
 
   const s3 = new AWS.S3({ region, accessKeyId, secretAccessKey, endpoint });
@@ -10,7 +10,12 @@ const replayEvents = (bucketSettings, eventHandler) => {
     return eventHandler(event.sequenceNumber, event.data)
       .catch(error => {
         process.env.NODE_ENV !== 'test' && console.error('Handling event failed:', error);
-        return processObjectLine(line);
+        return new Promise((resolve, reject) => (
+          setTimeout(
+            () => processObjectLine(line).then(resolve, reject),
+            retryDelay
+          )
+        ));
       });
   };
 

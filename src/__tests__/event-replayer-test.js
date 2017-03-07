@@ -120,10 +120,10 @@ describe('eventReplayer', () => {
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_11' }).returns(awsResponse({ Body: event }));
 
     const handleEvent = sandbox.stub();
-    handleEvent.onCall(0).returns(Promise.reject('Oops!'));
-    handleEvent.onCall(1).returns(Promise.reject('Oops!'));
-    handleEvent.onCall(2).returns(Promise.resolve());
-    return eventReplayer.replayEvents(bucketSettings, handleEvent).then(() => {
+    handleEvent.onCall(0).rejects('Oops!');
+    handleEvent.onCall(1).rejects('Oops!');
+    handleEvent.onCall(2).resolves();
+    return eventReplayer.replayEvents(bucketSettings, handleEvent, 0).then(() => {
       expect(handleEvent).to.have.been.calledWith('1', 'base64Data');
       expect(handleEvent.callCount).to.eql(3);
     });
