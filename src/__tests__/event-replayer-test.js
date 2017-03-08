@@ -26,6 +26,11 @@ describe('eventReplayer', () => {
   });
 
   const awsResponse = data => ({ promise: () => Promise.resolve(data) });
+  const slowAwsResponse = data => ({
+    promise: () => new Promise(resolve =>
+      setTimeout(() => resolve(data), 0)
+    )
+  });
 
   it('initialises S3 with the right settings', () => {
     s3.listObjectsV2.returns(awsResponse({ IsTruncated: false, Contents: [] }));
@@ -73,7 +78,7 @@ describe('eventReplayer', () => {
     });
   });
 
-  it('handle events in sequence', () => {
+  it('handle events in order, and in sequence', () => {
     s3.listObjectsV2.withArgs({ Bucket: 'archive-bucket', ContinuationToken: undefined }).returns(awsResponse({
       IsTruncated: true,
       NextContinuationToken: 'nextPlz',
@@ -83,15 +88,16 @@ describe('eventReplayer', () => {
       IsTruncated: false,
       Contents: [{ Key: '2017-01-06_13' }],
     }));
-    const event1 = '{"sequenceNumber":"1","data":"based64Data1"}\n';
-    const event2 = '{"sequenceNumber":"2","data":"based64Data2"}\n';
-    const event3 = '{"sequenceNumber":"3","data":"based64Data3"}\n';
-    const event4 = '{"sequenceNumber":"4","data":"based64Data4"}\n';
-    const event5 = '{"sequenceNumber":"5","data":"based64Data5"}\n';
+    const event1 = '{"sequenceNumber":"1","data":"base64Data1"}\n';
+    const event2 = '{"sequenceNumber":"2","data":"base64Data2"}\n';
+    const event3 = '{"sequenceNumber":"3","data":"base64Data3"}\n';
+    const event4 = '{"sequenceNumber":"4","data":"base64Data4"}\n';
+    const event5 = '{"sequenceNumber":"5","data":"base64Data5"}\n';
     const object1 = `${event1}${event2}`;
     const object2 = `${event3}`;
     const object3 = `${event4}${event5}`;
-    s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_11' }).returns(awsResponse({ Body: object1 }));
+    // We make the first response artifically slow, so that we can make sure it still gets handled before the second one
+    s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_11' }).returns(slowAwsResponse({ Body: object1 }));
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_12' }).returns(awsResponse({ Body: object2 }));
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_13' }).returns(awsResponse({ Body: object3 }));
 
@@ -100,10 +106,12 @@ describe('eventReplayer', () => {
       // This function acts as a slow event handler, which should be waited on by the replayer loop
       new Promise(resolve => {
         // This is just to track how many events have been processed
-        spy();
+        spy(sequenceNumber);
         setTimeout(() => {
           // Then after waiting a bit, we make sure that no subsequent events have been handled in the meantime
           expect(spy.callCount).to.eql(parseInt(sequenceNumber));
+          // And that everything is happening in the right order
+          expect(spy.lastCall.args[0]).to.eql(sequenceNumber);
           resolve();
         }, 0);
       })
