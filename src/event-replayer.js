@@ -19,30 +19,26 @@ const replayEvents = (bucketSettings, eventHandler, retryDelay = 500) => {
       });
   };
 
-  // The promise looping in the next two functions ensures that requests are processed sequentially, not in parallel.
+  // The promise reducing in the next two functions ensures that requests are processed sequentially, not in parallel.
   // It makes sure that each request is only handled after the previous one, and then sets itself as current.
   // This prevents race conditions, especially where network requests or application event handlers are slow.
 
   const fetchAndReplayObject = Key => {
-    let promise = Promise.resolve();
     return s3.getObject({ Bucket, Key }).promise().then(object => {
       process.env.NODE_ENV !== 'test' && console.log(`Fetched object: ${Key}`);
       const objectLines = object.Body.toString().trim().split('\n');
 
-      objectLines.forEach(line => {
-        promise = promise.then(() => processObjectLine(line));
-      });
-      return promise;
+      return objectLines.reduce((promise, line) => (
+        promise.then(() => processObjectLine(line))
+      ), Promise.resolve());
     })
   };
 
-  const fetchAndReplayObjects = objects => {
-    let promise = Promise.resolve();
-    objects.Contents.forEach(object => {
-      promise = promise.then(() => fetchAndReplayObject(object.Key));
-    })
-    return promise;
-  };
+  const fetchAndReplayObjects = objects => (
+    objects.Contents.reduce((promise, object) => (
+      promise.then(() => fetchAndReplayObject(object.Key))
+    ), Promise.resolve())
+  );
 
   const listAndFetchAndReplayObjects = ContinuationToken => {
     return s3.listObjectsV2({ Bucket, ContinuationToken }).promise().then(objects => {
