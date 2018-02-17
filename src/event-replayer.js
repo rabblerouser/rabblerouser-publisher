@@ -25,7 +25,7 @@ const replayEvents = (bucketSettings, eventHandler, logger, retryDelay = 500) =>
 
   const fetchAndReplayObject = Key => {
     return s3.getObject({ Bucket, Key }).promise().then(object => {
-      logger.info(`Fetched object: ${Key}`);
+      logger.info(`Fetched S3 object: ${Key}. Replaying its events...`);
       const objectLines = object.Body.toString().trim().split('\n');
 
       return objectLines.reduce((promise, line) => (

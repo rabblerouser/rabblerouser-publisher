@@ -93,7 +93,7 @@ class Listener {
       return 204;
     }
 
-    this.logger.info(`Handling event ${sequenceNumber.toString()}: ${event}`);
+    this.logger.info(`Handling event ${sequenceNumber.toString()}: ${event.toString()}`);
     return eventHandler(event.data).then(
       () => {
         this.lastSequenceNumber = sequenceNumber;
