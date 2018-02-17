@@ -93,7 +93,7 @@ class Listener {
       return 204;
     }
 
-    this.logger.info(`Handling event ${sequenceNumber.toString()}:`, event);
+    this.logger.info(`Handling event ${sequenceNumber.toString()}: ${event}`);
     return eventHandler(event.data).then(
       () => {
         this.lastSequenceNumber = sequenceNumber;
@@ -124,7 +124,7 @@ const parseKinesisEvent = (kinesisEvent, logger) => {
       event: JSON.parse(new Buffer(kinesisEvent.data, 'base64')),
     };
   } catch(e) {
-    logger.info(`Failed to parse kinesis data: ${JSON.stringify(kinesisEvent.data)}, ${e}`);
+    logger.info(`Failed to parse kinesis data: ${JSON.stringify(kinesisEvent.data)}, Error: ${e}`);
     return null;
   }
 };
