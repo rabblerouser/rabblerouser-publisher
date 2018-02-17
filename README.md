@@ -114,11 +114,3 @@ following structure:
 ```
 
 The `data` field, when decoded and parsed, must contain an event object with `type` and `data` attributes as described above.
-
-## Publishing this library
-
-Scoped packages (which this is) are private by default on npm, which is a paid feature. To publish publicly, use this command:
-
-```sh
-yarn publish --access=public
-```
