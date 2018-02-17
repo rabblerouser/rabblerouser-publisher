@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 
-const replayEvents = (bucketSettings, eventHandler, retryDelay = 500) => {
+const replayEvents = (bucketSettings, eventHandler, logger, retryDelay = 500) => {
   const { bucket: Bucket, region, accessKeyId, secretAccessKey, endpoint } = bucketSettings;
 
   const s3 = new AWS.S3({ region, accessKeyId, secretAccessKey, endpoint });
@@ -9,7 +9,7 @@ const replayEvents = (bucketSettings, eventHandler, retryDelay = 500) => {
     const event = JSON.parse(line);
     return eventHandler(event.sequenceNumber, event.data)
       .catch(error => {
-        process.env.NODE_ENV !== 'test' && console.error('Handling event failed:', error);
+        logger.error(`Handling event failed: ${error}`);
         return new Promise((resolve, reject) => (
           setTimeout(
             () => processObjectLine(line).then(resolve, reject),
@@ -25,7 +25,7 @@ const replayEvents = (bucketSettings, eventHandler, retryDelay = 500) => {
 
   const fetchAndReplayObject = Key => {
     return s3.getObject({ Bucket, Key }).promise().then(object => {
-      process.env.NODE_ENV !== 'test' && console.log(`Fetched object: ${Key}`);
+      logger.info(`Fetched object: ${Key}`);
       const objectLines = object.Body.toString().trim().split('\n');
 
       return objectLines.reduce((promise, line) => (
@@ -42,8 +42,7 @@ const replayEvents = (bucketSettings, eventHandler, retryDelay = 500) => {
 
   const listAndFetchAndReplayObjects = ContinuationToken => {
     return s3.listObjectsV2({ Bucket, ContinuationToken }).promise().then(objects => {
-      process.env.NODE_ENV !== 'test' &&
-        console.log(`Got list of bucket objects: [${objects.Contents.map(object => object.Key)}]`);
+      logger.info(`Got list of bucket objects: [${objects.Contents.map(object => object.Key)}]`);
       return fetchAndReplayObjects(objects).then(() => {
         if (objects.IsTruncated) {
           // There are more objects still in the bucket, recurse to the next lot
@@ -55,7 +54,7 @@ const replayEvents = (bucketSettings, eventHandler, retryDelay = 500) => {
     });
   };
 
-  process.env.NODE_ENV !== 'test' && console.log(`Replaying events from bucket: ${Bucket}`);
+  logger.info(`Replaying events from bucket: ${Bucket}`);
   return listAndFetchAndReplayObjects();
 };
 

@@ -13,6 +13,7 @@ class Listener {
       secretAccessKey: settings.secretAccessKey,
       endpoint: settings.s3Endpoint,
     } : null;
+    this.logger = settings.logger;
     this.eventHandlers = {};
     this.replaying = false;
     this.lastSequenceNumber = Big(-1);
@@ -34,10 +35,10 @@ class Listener {
   listen() {
     if (this.archiveBucketSettings) {
       this.replaying = true;
-      eventReplayer.replayEvents(this.archiveBucketSettings, this._bucketEventHandler).then(() => {
+      eventReplayer.replayEvents(this.archiveBucketSettings, this._bucketEventHandler, this.logger).then(() => {
         // This happens after *all* events from the bucket have been replayed
         this.replaying = false;
-      }).catch(process.env.NODE_ENV === 'test' ? () => {} : console.error); // Replay never finishes if it fails
+      }).catch(this.logger.error); // Replay never finishes if it fails
     }
     return (req, res) => {
       return Promise.resolve(req)
@@ -51,7 +52,7 @@ class Listener {
   }
 
   _bucketEventHandler(sequenceNumber, data) {
-    const event = parseKinesisEvent({ sequenceNumber, data });
+    const event = parseKinesisEvent({ sequenceNumber, data }, this.logger);
     if (!event) {
       return Promise.reject('Failed to parse kinesis data from bucket with sequence number:', sequenceNumber);
     }
@@ -73,7 +74,7 @@ class Listener {
   }
 
   _parseRequest(req) {
-    const event = parseKinesisEvent(req.body);
+    const event = parseKinesisEvent(req.body, this.logger);
     if (!event) {
       throw { status: 400, error: 'Missing or invalid request body' };
     }
@@ -82,17 +83,17 @@ class Listener {
 
   _handleEvent({ sequenceNumber, event }) {
     if (sequenceNumber.lte(this.lastSequenceNumber)) {
-      process.env.NODE_ENV !== 'test' && console.log(`Already handled event ${sequenceNumber.toString()}`);
+      this.logger.info(`Already handled event ${sequenceNumber.toString()}`);
       return 204;
     }
 
     const eventHandler = this.eventHandlers[event.type];
     if (!eventHandler) {
-      process.env.NODE_ENV !== 'test' && console.log(`Ignoring event ${sequenceNumber.toString()}`);
+      this.logger.info(`Ignoring event ${sequenceNumber.toString()}`);
       return 204;
     }
 
-    process.env.NODE_ENV !== 'test' && console.log(`Handling event ${sequenceNumber.toString()}:`, event);
+    this.logger.info(`Handling event ${sequenceNumber.toString()}:`, event);
     return eventHandler(event.data).then(
       () => {
         this.lastSequenceNumber = sequenceNumber;
@@ -113,7 +114,7 @@ const validateEventHandler = (type, handler) => {
   }
 };
 
-const parseKinesisEvent = kinesisEvent => {
+const parseKinesisEvent = (kinesisEvent, logger) => {
   if (!kinesisEvent) return null;
   if (!kinesisEvent.data) return null;
   if (!kinesisEvent.sequenceNumber) return null;
@@ -123,7 +124,7 @@ const parseKinesisEvent = kinesisEvent => {
       event: JSON.parse(new Buffer(kinesisEvent.data, 'base64')),
     };
   } catch(e) {
-    process.env.NODE_ENV !== 'test' && console.log(`Failed to parse kinesis data: ${JSON.stringify(kinesisEvent.data)}, ${e}`);
+    logger.info(`Failed to parse kinesis data: ${JSON.stringify(kinesisEvent.data)}, ${e}`);
     return null;
   }
 };

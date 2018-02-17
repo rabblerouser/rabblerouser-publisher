@@ -11,6 +11,7 @@ describe('eventReplayer', () => {
     secretAccessKey: 'ABC123',
     endpoint: 'http://s3:1234',
   };
+  const logger = { info: _ => _, warn: _ => _, error: _ => _ };
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
@@ -35,7 +36,7 @@ describe('eventReplayer', () => {
   it('initialises S3 with the right settings', () => {
     s3.listObjectsV2.returns(awsResponse({ IsTruncated: false, Contents: [] }));
 
-    eventReplayer.replayEvents(bucketSettings, () => Promise.resolve());
+    eventReplayer.replayEvents(bucketSettings, () => Promise.resolve(), logger);
 
     expect(AWS.S3).to.have.been.calledWith({
       region: 'ap-southeast-2',
@@ -68,7 +69,7 @@ describe('eventReplayer', () => {
     s3.getObject.withArgs({ Bucket: 'archive-bucket', Key: '2017-01-06_13' }).returns(awsResponse({ Body: object3 }));
 
     const handleEvent = sandbox.stub().resolves();
-    return eventReplayer.replayEvents(bucketSettings, handleEvent).then(() => {
+    return eventReplayer.replayEvents(bucketSettings, handleEvent, logger).then(() => {
       expect(handleEvent).to.have.been.calledWith('1', 'base64Data1');
       expect(handleEvent).to.have.been.calledWith('2', 'base64Data2');
       expect(handleEvent).to.have.been.calledWith('3', 'base64Data3');
@@ -116,7 +117,7 @@ describe('eventReplayer', () => {
         }, 0);
       })
     );
-    return eventReplayer.replayEvents(bucketSettings, eventHandler);
+    return eventReplayer.replayEvents(bucketSettings, eventHandler, logger);
   });
 
   it('retries events that fail temporarily', () => {
@@ -131,7 +132,7 @@ describe('eventReplayer', () => {
     handleEvent.onCall(0).rejects('Oops!');
     handleEvent.onCall(1).rejects('Oops!');
     handleEvent.onCall(2).resolves();
-    return eventReplayer.replayEvents(bucketSettings, handleEvent, 0).then(() => {
+    return eventReplayer.replayEvents(bucketSettings, handleEvent, logger, 0).then(() => {
       expect(handleEvent).to.have.been.calledWith('1', 'base64Data');
       expect(handleEvent.callCount).to.eql(3);
     });

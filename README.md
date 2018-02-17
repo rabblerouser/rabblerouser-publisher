@@ -38,7 +38,7 @@ streamClient.publish('member-registered', { name: 'Jane Doe' })
 // Set up a handler for events of specific types. Notice that we only receive
 // the `data` here. Event handlers must return a resolved promise if the event
 // handling succeeded, or a rejected promise if they fail to process the event.
-// This will cause the event to re-sent until it succeeds.
+// This will cause the event to be re-sent until it succeeds.
 streamClient.on('member-registered', data => {
   console.log('Registering a new member called:', data.name);
   return Promise.resolve();
@@ -72,6 +72,7 @@ want to bind any event handlers, or listen for events.
 - `secretAccessKey` (*string*): The AWS secret key for your kinesis stream and/or S3 bucket. Required if either `publishToStream` or `readArchiveFromBucket` are given.
 - `kinesisEndpoint` (*string*): The endpoint to send kinesis requests to. Useful for developing with e.g. kinesalite.
 - `s3Endpoint` (*string*): The endpoint to send S3 requests to. Useful for developing with e.g. fake-s3.
+- `logger` (*object*): A logger object with the methods `info`, `warn`, and `error`. Defaults to the standard JavaScript console object.
 
 Returns a `streamClient` object with the following methods:
 

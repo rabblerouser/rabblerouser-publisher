@@ -7,6 +7,7 @@ describe('listener', () => {
   let res;
   let listener;
   const header = () => 'secret';
+  const logger = { info: _ => _, warn: _ => _, error: _ => _ };
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
@@ -50,7 +51,7 @@ describe('listener', () => {
 
   describe('without a bucket', () => {
     beforeEach(() => {
-      listener = createListener({ listenWithAuthToken: 'secret' });
+      listener = createListener({ listenWithAuthToken: 'secret', logger });
     });
 
     it('refuses to register an event handler to no event type', () => {
@@ -146,6 +147,7 @@ describe('listener', () => {
         secretAccessKey: 'ABC123',
         s3Endpoint: 'http://s3:1234',
         garbage: 'superfluous',
+        logger
       });
     });
 

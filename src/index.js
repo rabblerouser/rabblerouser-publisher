@@ -4,6 +4,9 @@ const createListener = require('./listener');
 const createClient = (settings) => {
   if (!settings) { throw new Error('No settings defined'); }
   if (typeof settings !== 'object') { throw new Error('Settings must be an object'); }
+  if (!settings.logger) {
+    settings.logger = console;
+  }
 
   const publish = createPublisher(settings);
   const { on, listen } = createListener(settings);
