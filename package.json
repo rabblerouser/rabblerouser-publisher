@@ -2,47 +2,21 @@
   "name": "@rabblerouser/stream-client",
   "version": "0.8.8",
   "description": "Rabble Rouser's kinesis stream client. It publishes and listens for events.",
+  "engines": {
+    "node": ">=8.0.0"
+  },
   "main": "src/index.js",
   "scripts": {
-    "demo": "node demo/index.js",
     "test": "NODE_ENV=test mocha -r src/__tests__/testGlobals.js --recursive src/__tests__"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rabblerouser/stream-client.git"
+    "url": "https://github.com/rabblerouser/stream-client.git"
   },
-  "keywords": [
-    "streams",
-    "rabble-rouser",
-    "events",
-    "kinesis"
-  ],
   "license": "AGPL-3.0",
-  "bugs": {
-    "url": "https://github.com/rabblerouser/local-kinesis-lambda-runner/issues"
-  },
-  "homepage": "https://github.com/rabblerouser/local-kinesis-lambda-runner#readme",
-  "author": {
-    "name": "The Rabble Rouser Team",
-    "email": "rabblerouserproject@gmail.com",
-    "url": "https://rabblerouser.team"
-  },
-  "contributors": [
-    {
-      "name": "Pam Rucinque",
-      "url": "https://github.com/pameck"
-    },
-    {
-      "name": "Cam Jackson",
-      "url": "https://github.com/camjackson"
-    }
-  ],
   "dependencies": {
     "aws-sdk": "^2.7.21",
     "big.js": "^3.1.3"
-  },
-  "engines": {
-    "node": ">=6.0.0"
   },
   "devDependencies": {
     "body-parser": "^1.16.0",

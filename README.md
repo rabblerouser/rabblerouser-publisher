@@ -7,6 +7,8 @@ Rabble Rouser's kinesis stream client. It publishes and listens for events.
 ## Installation
 
 ```sh
+yarn add @rabblerouser/stream-client
+# OR
 npm install --save @rabblerouser/stream-client
 ```
 
@@ -118,5 +120,5 @@ The `data` field, when decoded and parsed, must contain an event object with `ty
 Scoped packages (which this is) are private by default on npm, which is a paid feature. To publish publicly, use this command:
 
 ```sh
-npm publish --access=public
+yarn publish --access=public
 ```
