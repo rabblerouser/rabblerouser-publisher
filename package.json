@@ -1,6 +1,6 @@
 {
   "name": "@rabblerouser/stream-client",
-  "version": "0.8.11",
+  "version": "0.8.12",
   "description": "Rabble Rouser's kinesis stream client. It publishes and listens for events.",
   "engines": {
     "node": ">=8.0.0"
