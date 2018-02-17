@@ -83,13 +83,13 @@ class Listener {
 
   _handleEvent({ sequenceNumber, event }) {
     if (sequenceNumber.lte(this.lastSequenceNumber)) {
-      this.logger.info(`Already handled event ${sequenceNumber.toString()}`);
+      this.logger.info(`Already handled event ${sequenceNumber.toString()} of type ${event.type}`);
       return 204;
     }
 
     const eventHandler = this.eventHandlers[event.type];
     if (!eventHandler) {
-      this.logger.info(`Ignoring event ${sequenceNumber.toString()}`);
+      this.logger.info(`Not subscribed to event ${sequenceNumber.toString()} of type ${event.type}`);
       return 204;
     }
 
