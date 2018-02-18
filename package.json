@@ -23,8 +23,7 @@
     "chai": "^3.5.0",
     "express": "^4.14.1",
     "mocha": "^3.2.0",
-    "sinon": "^1.17.7",
-    "sinon-as-promised": "^4.0.2",
-    "sinon-chai": "^2.8.0"
+    "sinon": "^4.3.0",
+    "sinon-chai": "^2.14.0"
   }
 }
