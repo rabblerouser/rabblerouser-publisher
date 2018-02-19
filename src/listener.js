@@ -15,13 +15,12 @@ class Listener {
     } : null;
     this.logger = settings.logger;
     this.eventHandlers = {};
-    this.replaying = false;
+    this.processingEvent = false;
     this.lastSequenceNumber = Big(-1);
 
     this.on = this.on.bind(this);
     this.listen = this.listen.bind(this);
     this._checkAuth = this._checkAuth.bind(this);
-    this._rejectNewEventsWhileReplaying = this._rejectNewEventsWhileReplaying.bind(this);
     this._bucketEventHandler = this._bucketEventHandler.bind(this);
     this._handleEvent = this._handleEvent.bind(this);
     this._parseRequest = this._parseRequest.bind(this);
@@ -34,20 +33,26 @@ class Listener {
 
   listen() {
     if (this.archiveBucketSettings) {
-      this.replaying = true;
+      this.processingEvent = true;
       eventReplayer.replayEvents(this.archiveBucketSettings, this._bucketEventHandler, this.logger).then(() => {
         // This happens after *all* events from the bucket have been replayed
-        this.replaying = false;
+        this.processingEvent = false;
       }).catch(this.logger.error); // Replay never finishes if it fails
     }
     return (req, res) => {
+      if (this.processingEvent) {
+        this.logger.info('Rejecting an event because another one is already in progress.');
+        res.status(503).json({ error: 'Currently processing another event. Try again soon.' });
+        return Promise.resolve();
+      }
+      this.processingEvent = true;
       return Promise.resolve(req)
         .then(this._checkAuth)
-        .then(this._rejectNewEventsWhileReplaying)
         .then(this._parseRequest)
         .then(this._handleEvent)
         .then(status => res.sendStatus(status))
-        .catch(({ status, error }) => res.status(status).json({ error }));
+        .catch(({ status, error }) => res.status(status).json({ error }))
+        .then(() => { this.processingEvent = false });
     };
   }
 
@@ -65,13 +70,6 @@ class Listener {
     }
     return req;
   };
-
-  _rejectNewEventsWhileReplaying(req) {
-    if (this.replaying) {
-      throw { status: 503, error: 'Currently replaying historical events. Try again soon.' };
-    }
-    return req;
-  }
 
   _parseRequest(req) {
     const event = parseKinesisEvent(req.body, this.logger);

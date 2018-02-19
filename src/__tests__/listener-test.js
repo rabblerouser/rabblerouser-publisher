@@ -106,6 +106,24 @@ describe('listener', () => {
       });
     });
 
+    it('only handles one event at a time, rejecting concurrent requests', () => {
+      // An event handler that doesn't ever finish
+      const eventHandler = sinon.stub().returns(new Promise(() => {}));
+      listener.on('some-event-type', eventHandler);
+
+      const req = { header, body: requestBody("0", { type: 'some-event-type', data: { some: 'data' } }) };
+
+      const middleware = listener.listen();
+      middleware(req, res);
+      middleware(req, res);
+      middleware(req, res);
+
+      // Delay the assertions so that the middlewares have a chance to do their thing
+      return new Promise(setImmediate).then(() => {
+        expect(eventHandler).to.have.callCount(1);
+      });
+    });
+
     it('succeeds and does nothing if there is no handler that matches the given event', () => {
       const req = { header, body: requestBody("0", { type: 'ignore-me', data: {} }) };
       return listener.listen()(req, res).then(() => {
@@ -334,15 +352,15 @@ describe('listener', () => {
 
       // Send events 0, 1, and 2 from the bucket first
       const bucketEventHandler = eventReplayer.replayEvents.args[0][1];
-      return Promise.all([0, 1, 2].map(sequenceNumber => (
+      return [0, 1, 2].reduce((promise, sequenceNumber) => promise.then(() => (
         bucketEventHandler(sequenceNumber.toString(), encodeEvent(events[sequenceNumber]))
-      ))).then(() => (
-
+      )), Promise.resolve())
+      .then(() => (
         // Now send events 1, 2, and 3 from the stream
-        Promise.all([1, 2, 3].map(sequenceNumber => {
+        [1, 2, 3].reduce((promise, sequenceNumber) => promise.then(() => {
           const req = { header, body: requestBody(sequenceNumber.toString(), events[sequenceNumber]) };
           return middleware(req, res);
-        }))
+        }), Promise.resolve())
       )).then(() => {
         // It should have processed all the events...
         expect(eventHandler).to.have.been.calledWith({ some: 'data0' });
